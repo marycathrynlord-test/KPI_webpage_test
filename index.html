@@ -230,11 +230,6 @@
           <div class="coverage-stat"><span class="big" id="cov-goals">–</span><span class="lbl">active Strategic<br>Plan Goal areas</span></div>
         </div>
       </div>
-      <div class="panel">
-        <h2>Population Growth</h2>
-        <p class="panel-sub">Residents, by year</p>
-        <canvas id="popChart" height="200"></canvas>
-      </div>
     </div>
   </div>
 
@@ -532,24 +527,6 @@ function wireFrameworkJumps(){
         setTimeout(()=>{ target.style.boxShadow=''; }, 1200);
       }
     });
-  });
-}
-
-/* ---------- Population chart ---------- */
-function renderPopChart(){
-  Chart.defaults.font.family = "'Aptos','Segoe UI',system-ui,sans-serif";
-  Chart.defaults.color = '#5B6B67';
-  new Chart(document.getElementById('popChart'), {
-    type: 'line',
-    data: {
-      labels: DATA.populationTrend.labels,
-      datasets: [{
-        data: DATA.populationTrend.data,
-        borderColor: '#006A53', backgroundColor:'rgba(0,106,83,0.10)',
-        fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#006A53', borderWidth:2.5
-      }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{ y:{grid:{color:'#EAF2EF'}, ticks:{callback:v=>v.toLocaleString()}}, x:{grid:{display:false}} } }
   });
 }
 
