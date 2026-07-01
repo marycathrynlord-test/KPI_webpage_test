@@ -85,37 +85,6 @@
   .section-head h2{margin:0 0 6px;font-size:23px;font-weight:700;color:var(--forest-dark);letter-spacing:-.01em;}
   .section-head p{margin:0;color:var(--slate);font-size:14px;max-width:680px;line-height:1.5;}
 
-  /* ---------- Framework diagram ---------- */
-  .framework{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--white);}
-  .framework-bar{background:var(--forest);color:var(--white);padding:22px 28px;font-size:20px;font-weight:700;letter-spacing:.02em;}
-  .framework-body{padding:36px 28px 30px;position:relative;}
-  .fw-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;grid-template-rows:auto auto;column-gap:14px;row-gap:52px;position:relative;max-width:920px;}
-  .fw-box{
-    border:2px solid var(--fw-blue); border-radius:6px; padding:14px 10px; text-align:center;
-    font-weight:700; font-size:15px; color:var(--forest-dark); background:var(--white);
-    cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; line-height:1.25;
-  }
-  .fw-box:hover{transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,106,83,.14);}
-  .fw-box.gold{border-color:var(--fw-gold);}
-  .fw-row{display:flex;align-items:center;gap:10px;position:relative;}
-  .fw-arrow{flex:none;color:var(--forest-dark);font-size:15px;}
-  .fw-divider{
-    position:absolute; left:0; right:0; top:calc(50% - 26px);
-    border-top:3px dashed var(--forest-dark); z-index:0;
-  }
-  .fw-labels{position:absolute; right:-6px; top:calc(50% - 66px); display:flex; flex-direction:column; gap:44px; font-size:14px; font-weight:600; color:var(--fw-purple);}
-  .fw-legend{position:absolute; top:36px; right:28px; width:210px; font-size:12.5px; color:var(--forest-dark); display:flex; flex-direction:column; gap:16px;}
-  .fw-legend .li{display:flex; gap:10px; align-items:flex-start;}
-  .fw-legend .swatch{width:16px;height:16px;border:2px solid var(--fw-gold);border-radius:3px;flex:none;margin-top:1px;}
-  .fw-legend .swatch.blue{border-color:var(--fw-blue);}
-  .fw-legend .arrow-key{font-size:14px; color:var(--forest-dark);}
-  @media (max-width:920px){ .fw-legend{position:static; width:auto; margin-top:28px; flex-direction:row; flex-wrap:wrap;} .fw-grid{max-width:none;} }
-  @media (max-width:640px){
-    .fw-grid{grid-template-columns:1fr; row-gap:14px;}
-    .fw-row{flex-direction:column;}
-    .fw-arrow{transform:rotate(90deg);}
-    .fw-divider,.fw-labels{display:none;}
-  }
 
   /* ---------- Goal filter chips ---------- */
   .goal-bar{display:flex; flex-wrap:wrap; gap:10px; margin-top:20px;}
