@@ -84,6 +84,27 @@
   .section-head h2{margin:0 0 6px;font-size:23px;font-weight:700;color:var(--forest-dark);letter-spacing:-.01em;}
   .section-head p{margin:0;color:var(--slate);font-size:14px;max-width:720px;line-height:1.5;}
 
+  /* ---------- Status badges ---------- */
+  .status-badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+    padding:3px 10px; border-radius:100px; white-space:nowrap; flex:none;
+  }
+  .status-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .status-on-track{ color:#00543F; background:rgba(27,138,121,0.14); }
+  .status-on-track .status-dot{ background:#1B8A79; }
+  .status-at-risk{ color:#8A6414; background:rgba(217,164,65,0.20); }
+  .status-at-risk .status-dot{ background:#D9A441; }
+  .status-off-track{ color:#8A2E26; background:rgba(193,68,59,0.14); }
+  .status-off-track .status-dot{ background:#C1443B; }
+  .status-no-data{ color:#5B6B67; background:rgba(154,166,162,0.20); }
+  .status-no-data .status-dot{ background:#9AA6A2; }
+
+  .status-legend{display:flex; flex-wrap:wrap; gap:10px 20px; margin-top:14px; font-size:12.5px; color:var(--slate);}
+  .status-legend .item{display:flex; align-items:center; gap:7px;}
+
+  .status-summary{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .status-summary .status-badge{font-size:12px; padding:6px 14px;}
+
   /* ---------- At-a-glance stats ---------- */
   .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:18px;}
   @media (max-width:900px){ .stat-grid{grid-template-columns:repeat(3,1fr);} }
@@ -191,9 +212,10 @@
     <div class="section-head">
       <div class="eyebrow">Organization</div>
       <h2>At a glance</h2>
-      <p>How the City's work is organized, top to bottom.</p>
+      <p>How the City's work is organized, top to bottom, and how it's performing right now.</p>
     </div>
     <div class="stat-grid" id="stat-grid"></div>
+    <div class="status-summary" id="status-summary"></div>
   </div>
 
   <!-- MAIN ASK: WORK SYSTEM → KEY SERVICE → PROGRAM -->
@@ -201,7 +223,7 @@
     <div class="section-head">
       <div class="eyebrow">Operational Structure</div>
       <h2>Work Systems → Key Services → Programs</h2>
-      <p>Expand a Work System to see its Key Services, then expand a Key Service to see the Programs delivered underneath it.</p>
+      <p>Expand a Work System to see its Key Services, then expand a Key Service to see the Programs delivered underneath it. Each badge reflects the most urgent status found anywhere inside it — if one Program is Off Track, its Key Service and Work System show Off Track too, so problems surface rather than average out.</p>
     </div>
 
     <div class="drill-col">
@@ -210,6 +232,7 @@
         <h3>Every Work System, drilled all the way down</h3>
       </div>
       <div class="drill-col-body" id="ws-tree"></div>
+      <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
     </div>
   </div>
 
@@ -338,6 +361,58 @@ function renderKPIs(){
   });
 }
 
+/* ---------- Status rollup ---------- */
+const STATUS_META = {
+  'on-track':  { label: 'On Track' },
+  'at-risk':   { label: 'At Risk' },
+  'off-track': { label: 'Off Track' },
+  'no-data':   { label: 'No Data' },
+};
+
+// Given a list of statuses, return the single most urgent one.
+// "no-data" entries are ignored unless every entry is no-data.
+function rollupStatus(statuses){
+  const known = statuses.filter(s => s && s !== 'no-data');
+  if(known.length === 0) return 'no-data';
+  if(known.includes('off-track')) return 'off-track';
+  if(known.includes('at-risk')) return 'at-risk';
+  return 'on-track';
+}
+
+function programStatus(p){ return p.status || 'no-data'; }
+
+function keyServiceStatus(ks){
+  const progs = DATA.programs.filter(p => p.keyservice === ks.id);
+  if(progs.length > 0) return rollupStatus(progs.map(programStatus));
+  return ks.status || 'no-data';
+}
+
+function workSystemStatus(ws){
+  const services = DATA.keyServices.filter(k => k.workSystem === ws.id);
+  return rollupStatus(services.map(keyServiceStatus));
+}
+
+function statusBadgeHTML(status){
+  const meta = STATUS_META[status] || STATUS_META['no-data'];
+  return `<span class="status-badge status-${status}"><span class="status-dot"></span>${meta.label}</span>`;
+}
+
+function renderStatusSummary(){
+  const counts = { 'on-track':0, 'at-risk':0, 'off-track':0, 'no-data':0 };
+  DATA.workSystems.forEach(ws => { counts[workSystemStatus(ws)]++; });
+
+  document.getElementById('status-summary').innerHTML = Object.entries(counts)
+    .filter(([,n]) => n > 0)
+    .map(([status,n]) => `<span class="status-badge status-${status}"><span class="status-dot"></span>${n} Work System${n!==1?'s':''} ${STATUS_META[status].label}</span>`)
+    .join('');
+
+  document.getElementById('status-legend').innerHTML = Object.entries(STATUS_META)
+    .map(([status,meta]) => `<span class="item"><span class="status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${
+      status==='on-track'?'#1B8A79':status==='at-risk'?'#D9A441':status==='off-track'?'#C1443B':'#9AA6A2'
+    }"></span>${meta.label}</span>`)
+    .join('');
+}
+
 /* ---------- At-a-glance stats ---------- */
 function renderStats(){
   const stats = [
@@ -362,7 +437,13 @@ function renderWorkSystemTree(){
     const ksHTML = services.map(ks=>{
       const progs = DATA.programs.filter(p=>p.keyservice===ks.id);
       const progHTML = progs.length
-        ? progs.map(p=>`<div class="leaf-card"><span class="box-tag gold">Program</span>${p.name}</div>`).join('')
+        ? progs.map(p=>`
+            <div class="leaf-card">
+              <span class="box-tag gold">Program</span>
+              <span style="flex:1;">${p.name}</span>
+              ${statusBadgeHTML(programStatus(p))}
+            </div>
+          `).join('')
         : `<div class="empty-note">No programs recorded under this Key Service yet.</div>`;
 
       return `
@@ -371,6 +452,7 @@ function renderWorkSystemTree(){
             <span class="left">
               <span class="box-tag gold">Key Service</span>
               <span class="name">${ks.name}</span>
+              ${statusBadgeHTML(keyServiceStatus(ks))}
             </span>
             <span class="meta">${progs.length} program${progs.length!==1?'s':''} <span class="chevron">▾</span></span>
           </button>
@@ -385,6 +467,7 @@ function renderWorkSystemTree(){
           <span class="left">
             <span class="box-tag">Work System</span>
             <span class="name">${ws.name}</span>
+            ${statusBadgeHTML(workSystemStatus(ws))}
           </span>
           <span class="meta">${services.length} key service${services.length!==1?'s':''} <span class="chevron">▾</span></span>
         </button>
@@ -434,6 +517,7 @@ function init(){
 
   renderKPIs();
   renderStats();
+  renderStatusSummary();
   renderWorkSystemTree();
   renderGoalTree();
 }
