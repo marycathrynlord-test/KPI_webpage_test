@@ -220,8 +220,45 @@
   .node-item.dimmed{opacity:.25; transition:opacity .2s ease;}
   .leaf-card.dimmed{opacity:.25; transition:opacity .2s ease;}
 
+  /* ---------- Headline synthesis banner ---------- */
+  .headline-banner{
+    margin-top:22px; padding:18px 22px; border-radius:var(--radius);
+    background:var(--mist); border:1px solid var(--line);
+    display:flex; align-items:center; gap:14px; font-size:15px; color:var(--ink);
+  }
+  .headline-banner.critical{ background:rgba(193,68,59,0.09); border-color:rgba(193,68,59,0.3); }
+  .headline-banner.caution{ background:rgba(217,164,65,0.12); border-color:rgba(217,164,65,0.35); }
+  .headline-banner.clear{ background:rgba(27,138,121,0.10); border-color:rgba(27,138,121,0.3); }
+  .headline-banner .hb-icon{font-size:22px; flex:none;}
+  .headline-banner strong{font-weight:700;}
+
+  /* ---------- Goal comparison strip (overview) ---------- */
+  .goal-summary-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;}
+  @media (max-width:900px){ .goal-summary-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:600px){ .goal-summary-grid{grid-template-columns:1fr;} }
+  .goal-card{
+    text-align:left; background:var(--white); border:1px solid var(--line); border-top:4px solid var(--line);
+    border-radius:var(--radius); padding:16px; cursor:pointer; font-family:inherit;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .goal-card:hover, .goal-card:focus-visible{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,106,83,.10); outline:none; }
+  .goal-card-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px;}
+  .goal-card-name{font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.3;}
+  .bar-track-wide{display:flex; width:100%; height:9px; border-radius:100px; overflow:hidden; background:var(--line); margin-bottom:10px;}
+  .bar-seg{height:100%; flex:none;}
+  .goal-card-meta{font-size:11.5px; color:var(--slate);}
+
+  /* ---------- Inline target metric ---------- */
+  .inline-metric{
+    font-size:11px; font-weight:700; color:var(--forest-dark);
+    background:var(--white); border:1px solid var(--line); border-radius:6px; padding:2px 8px; white-space:nowrap;
+  }
+  .inline-metric .im-target{font-weight:500; color:var(--slate);}
+
   /* ---------- Strategic plan reference ---------- */
-  .goal-dot{width:12px;height:12px;border-radius:50%;flex:none;}
+  /* goal-dot removed from the tree intentionally — goal branding color now
+     lives only in the summary cards below, so status color stays the one
+     dominant signal inside the detail tree. */
 
   /* ---------- Footer ---------- */
   footer{margin-top:44px; position:relative;}
@@ -260,7 +297,7 @@
 <div class="wrap" id="dashboard">
 
   <div class="titleband">
-    <div class="eyebrow" id="period-label">FY2026 · Key Performance Snapshot</div>
+    <div class="eyebrow" id="period-label">FY2026 · Quarterly Snapshot</div>
     <h1>How the City of Durango is Performing</h1>
     <p>Key Performance Indicators (KPIs) show how the City is doing on the things that matter most. 
       <br> They measure progress toward our strategic goals and help ensure accountability to the community.
@@ -269,6 +306,19 @@
 
   <!-- CITY SNAPSHOT (renders only if data.json includes a kpis array) -->
   <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- HEADLINE SYNTHESIS -->
+  <div class="headline-banner" id="headline-banner"></div>
+
+  <!-- GOAL COMPARISON STRIP (overview — click a card to jump to its detail below) -->
+  <div class="section" style="margin-top:28px;">
+    <div class="section-head">
+      <div class="eyebrow">Strategic Plan</div>
+      <h2>Goals at a glance, worst first</h2>
+      <p>Each bar shows the mix of On Track / At Risk / Off Track Key Services behind that Goal. Click a card to jump to its full detail below.</p>
+    </div>
+    <div class="goal-summary-grid" id="goal-summary"></div>
+  </div>
 
    <!-- ORGANIZATION AT A GLANCE -->
   <div class="section">
@@ -551,8 +601,20 @@ function wireStatusTooltips(scope){
     el.addEventListener('mouseleave', hideTooltip);
     el.addEventListener('focus', ()=> showTooltip(el, el.dataset.tipId));
     el.addEventListener('blur', hideTooltip);
+    // Touch devices have no hover — tap to toggle instead.
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const tooltip = document.getElementById('hover-tooltip');
+      const isOpenForThis = tooltip.classList.contains('visible') && tooltip.dataset.ownerId === el.dataset.tipId;
+      if(isOpenForThis){ hideTooltip(); }
+      else{ showTooltip(el, el.dataset.tipId); tooltip.dataset.ownerId = el.dataset.tipId; }
+    });
   });
 }
+
+// Tapping anywhere outside an open tooltip closes it — needed since
+// touch devices have no hover-out event to rely on.
+document.addEventListener('click', ()=>{ hideTooltip(); });
 
 function renderStatusLegend(){
   document.getElementById('status-legend').innerHTML = Object.entries(STATUS_META)
@@ -590,12 +652,107 @@ function renderStats(){
    Programs (alignment only), Objectives reveal their real Programs
    (the actual rollup). A Key Service or Program aligned to more than
    one Goal/Objective will legitimately appear more than once. */
+/* ---------- Headline synthesis ----------
+   One computed sentence, generated from the data (not hand-typed),
+   surfacing what actually needs attention before anyone clicks anything. */
+function renderHeadline(){
+  const banner = document.getElementById('headline-banner');
+  const offGoals = DATA.goals.filter(g=>goalStatus(g)==='off-track');
+  const riskGoals = DATA.goals.filter(g=>goalStatus(g)==='at-risk');
+  const troubled = offGoals.length + riskGoals.length;
+
+  // Find the worst-performing Key Services driving the problem, worst first.
+  const offKS = DATA.keyServices.filter(k=>keyServiceStatus(k)==='off-track');
+  const riskKS = DATA.keyServices.filter(k=>keyServiceStatus(k)==='at-risk');
+  const drivers = [...offKS, ...riskKS].slice(0,3).map(k=>k.name);
+
+  let icon, cls, html;
+  if(troubled === 0){
+    icon = '✓'; cls = 'clear';
+    html = `<strong>All ${DATA.goals.length} Strategic Plan Goals are On Track</strong> this quarter — no immediate action needed.`;
+  } else {
+    icon = offGoals.length > 0 ? '⚠' : '•';
+    cls = offGoals.length > 0 ? 'critical' : 'caution';
+    const driverText = drivers.length
+      ? ` Primarily driven by <strong>${drivers.join(', ')}</strong>.`
+      : '';
+    html = `<strong>${troubled} of ${DATA.goals.length} Strategic Plan Goals</strong> need attention this quarter
+      (${offGoals.length} Off Track, ${riskGoals.length} At Risk).${driverText}`;
+  }
+
+  banner.className = `headline-banner ${cls}`;
+  banner.innerHTML = `<span class="hb-icon">${icon}</span><span>${html}</span>`;
+}
+
+function goalSortWeight(status){
+  return status==='off-track' ? 0 : status==='at-risk' ? 1 : status==='on-track' ? 2 : 3;
+}
+
+function goalCompositionBar(g){
+  const services = DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id));
+  const counts = { 'on-track':0, 'at-risk':0, 'off-track':0, 'no-data':0 };
+  services.forEach(k=>counts[keyServiceStatus(k)]++);
+  const total = services.length;
+  if(total === 0) return `<div class="bar-track-wide"><span class="bar-seg" style="width:100%;background:var(--line)"></span></div>`;
+  const segs = Object.entries(counts).filter(([,n])=>n>0).map(([status,n])=>
+    `<span class="bar-seg" style="width:${(n/total*100).toFixed(1)}%;background:${statusDotColor(status)}" title="${n} ${STATUS_META[status].label}"></span>`
+  ).join('');
+  return `<div class="bar-track-wide">${segs}</div>`;
+}
+
+function renderGoalSummary(){
+  const sorted = [...DATA.goals].sort((a,b)=>goalSortWeight(goalStatus(a)) - goalSortWeight(goalStatus(b)));
+  const grid = document.getElementById('goal-summary');
+
+  grid.innerHTML = sorted.map(g=>{
+    const status = goalStatus(g);
+    const ksCount = DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id)).length;
+    const obCount = DATA.objectives.filter(o=>o.goal===g.id).length;
+    return `
+      <button class="goal-card" data-goal-jump="${g.id}" style="border-top-color:${g.color}">
+        <div class="goal-card-top">
+          <span class="goal-card-name">${g.name}</span>
+          ${statusBadgeHTML(status)}
+        </div>
+        ${goalCompositionBar(g)}
+        <div class="goal-card-meta">${ksCount} key service${ksCount!==1?'s':''} · ${obCount} objective${obCount!==1?'s':''}</div>
+      </button>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('[data-goal-jump]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = document.getElementById(`goalnode-${btn.dataset.goalJump}`);
+      if(!target) return;
+      target.classList.add('open');
+      target.scrollIntoView({ behavior:'smooth', block:'start' });
+      target.style.transition = 'box-shadow .3s ease';
+      target.style.boxShadow = '0 0 0 3px var(--sage)';
+      setTimeout(()=>{ target.style.boxShadow = ''; }, 1400);
+    });
+  });
+}
+
+function primaryMetricHTML(item){
+  const metrics = (item.details && item.details.metrics) || [];
+  const m = metrics.find(m=>m.target) || metrics[0];
+  if(!m) return '';
+  return `<span class="inline-metric">${m.value}${m.target ? ` <span class="im-target">/ target ${m.target}</span>` : ''}</span>`;
+}
+
 function renderStrategicTree(){
   const root = document.getElementById('ws-tree');
 
-  root.innerHTML = DATA.goals.map(g=>{
-    const alignedKS = DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id));
-    const objs = DATA.objectives.filter(o=>o.goal===g.id);
+  const sortedGoals = [...DATA.goals].sort((a,b)=>goalSortWeight(goalStatus(a)) - goalSortWeight(goalStatus(b)));
+
+  root.innerHTML = sortedGoals.map(g=>{
+    const gStatus = goalStatus(g);
+    const alignedKS = DATA.keyServices
+      .filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id))
+      .sort((a,b)=>goalSortWeight(keyServiceStatus(a)) - goalSortWeight(keyServiceStatus(b)));
+    const objs = DATA.objectives
+      .filter(o=>o.goal===g.id)
+      .sort((a,b)=>goalSortWeight(objectiveStatus(a)) - goalSortWeight(objectiveStatus(b)));
 
     const ksHTML = alignedKS.length
       ? alignedKS.map(ks=>{
@@ -610,6 +767,7 @@ function renderStrategicTree(){
                     <span class="box-tag gold">Program</span>
                     <span style="flex:1;">${p.name}</span>
                     ${obTags}
+                    ${primaryMetricHTML(p)}
                     ${statusBadgeHTML(programStatus(p))}
                     <button class="detail-btn" data-kind="program" data-id="${p.id}">Details</button>
                   </div>
@@ -617,14 +775,16 @@ function renderStrategicTree(){
               }).join('')
             : `<div class="empty-note">No related Programs recorded yet.</div>`;
 
+          const ksStatus = keyServiceStatus(ks);
           return `
-            <div class="node-item ks-node">
+            <div class="node-item ks-node${ksStatus==='off-track' ? ' open' : ''}">
               <div class="node-header" role="button" tabindex="0">
                 <span class="left">
                   <span class="box-tag gold">Key Service</span>
                   <span class="name">${ks.name}</span>
                   ${ws ? `<span class="align-tag">${ws.name}</span>` : ''}
-                  ${statusBadgeHTML(keyServiceStatus(ks))}
+                  ${primaryMetricHTML(ks)}
+                  ${statusBadgeHTML(ksStatus)}
                 </span>
                 <span class="meta">${relatedProgs.length} related program${relatedProgs.length!==1?'s':''}
                   <button class="detail-btn" data-kind="ks" data-id="${ks.id}">Details</button>
@@ -648,19 +808,21 @@ function renderStrategicTree(){
                 <div class="leaf-card">
                   <span class="box-tag gold">Program</span>
                   <span style="flex:1;">${p.name}</span>
+                  ${primaryMetricHTML(p)}
                   ${statusBadgeHTML(programStatus(p))}
                   <button class="detail-btn" data-kind="program" data-id="${p.id}">Details</button>
                 </div>
               `).join('')
             : `<div class="empty-note">No Programs recorded under this Objective yet.</div>`;
 
+          const obStatus = objectiveStatus(o);
           return `
-            <div class="node-item ks-node">
+            <div class="node-item ks-node${obStatus==='off-track' ? ' open' : ''}">
               <div class="node-header" role="button" tabindex="0">
                 <span class="left">
                   <span class="box-tag">Objective</span>
                   <span class="name">${o.name}</span>
-                  ${statusBadgeHTML(objectiveStatus(o))}
+                  ${statusBadgeHTML(obStatus)}
                 </span>
                 <span class="meta">${progs.length} program${progs.length!==1?'s':''} <span class="chevron">▾</span></span>
               </div>
@@ -671,13 +833,12 @@ function renderStrategicTree(){
       : `<div class="empty-note">No Objectives recorded under this Goal yet.</div>`;
 
     return `
-      <div class="node-item ws-node">
+      <div class="node-item ws-node${gStatus!=='on-track' ? ' open' : ''}" id="goalnode-${g.id}">
         <div class="node-header" role="button" tabindex="0">
           <span class="left">
-            <span class="goal-dot" style="background:${g.color}"></span>
             <span class="box-tag">Goal</span>
             <span class="name">${g.name}</span>
-            ${statusBadgeHTML(goalStatus(g))}
+            ${statusBadgeHTML(gStatus)}
           </span>
           <span class="meta">${alignedKS.length} key service${alignedKS.length!==1?'s':''} · ${objs.length} objective${objs.length!==1?'s':''} <span class="chevron">▾</span></span>
         </div>
@@ -727,6 +888,14 @@ function wireObjectiveTooltips(scope){
     el.addEventListener('mouseleave', hideTooltip);
     el.addEventListener('focus', show);
     el.addEventListener('blur', hideTooltip);
+    // Touch devices have no hover — tap to toggle instead.
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const tooltip = document.getElementById('hover-tooltip');
+      const isOpenForThis = tooltip.classList.contains('visible') && tooltip.dataset.ownerId === el.dataset.objTip;
+      if(isOpenForThis){ hideTooltip(); }
+      else{ show(); tooltip.dataset.ownerId = el.dataset.objTip; }
+    });
   });
 }
 
@@ -815,6 +984,8 @@ function init(){
   }
 
   renderKPIs();
+  renderHeadline();
+  renderGoalSummary();
   renderStats();
   renderStatusLegend();
   renderStrategicTree();
