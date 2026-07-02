@@ -624,7 +624,7 @@ function renderWorkSystemTree(){
       const goalTags = goalObjs.map(g=>`<span class="align-tag" title="Rolls up into this Strategic Plan Goal">⟶ ${g.name}</span>`).join('');
 
       return `
-        <div class="node-item ks-node">
+        <div class="node-item ks-node" id="ksnode-${ks.id}">
           <div class="node-header" role="button" tabindex="0">
             <span class="left">
               <span class="box-tag gold">Key Service</span>
@@ -688,6 +688,7 @@ function renderGoalTree(){
               <span style="flex:1;">${ks.name}</span>
               ${ws ? `<span class="align-tag">${ws.name}</span>` : ''}
               ${statusBadgeHTML(keyServiceStatus(ks))}
+              <button class="detail-btn" data-jump-ks="${ks.id}">See its Programs ↓</button>
             </div>
           `;
         }).join('')
@@ -746,6 +747,28 @@ function renderGoalTree(){
 
   wireAccordions(root);
   wireDetailButtons(root);
+  wireGoalJumps(root);
+}
+
+/* ---------- Jump from a Goal's Key Service to that Key Service's real
+   location in the Work Systems tree, auto-expanding it along the way ---------- */
+function wireGoalJumps(scope){
+  scope.querySelectorAll('[data-jump-ks]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const target = document.getElementById(`ksnode-${btn.dataset.jumpKs}`);
+      if(!target) return;
+
+      target.classList.add('open');
+      const parentWs = target.closest('.node-item.ws-node');
+      if(parentWs && parentWs !== target) parentWs.classList.add('open');
+
+      target.scrollIntoView({ behavior:'smooth', block:'center' });
+      target.style.transition = 'box-shadow .3s ease';
+      target.style.boxShadow = '0 0 0 3px var(--sage)';
+      setTimeout(()=>{ target.style.boxShadow = ''; }, 1400);
+    });
+  });
 }
 
 function wireAccordions(scope){
