@@ -211,14 +211,7 @@
   .empty-note{margin:0 0 10px 30px; font-size:12px; color:var(--slate); font-style:italic;}
 
   /* ---------- Strategic plan reference ---------- */
-  .goal-block{border-bottom:1px solid var(--line);}
-  .goal-block:last-child{border-bottom:none;}
-  .goal-head{display:flex; align-items:center; gap:10px; padding:14px 8px;}
   .goal-dot{width:12px;height:12px;border-radius:50%;flex:none;}
-  .goal-head .name{font-size:14.5px; font-weight:700; color:var(--ink);}
-  .goal-head .count{font-size:12px; color:var(--slate); margin-left:auto;}
-  .obj-list{padding:0 8px 14px 32px; display:flex; flex-direction:column; gap:6px;}
-  .obj-list .obj{font-size:13px; color:var(--slate);}
 
   /* ---------- Footer ---------- */
   footer{margin-top:44px; position:relative;}
@@ -282,11 +275,14 @@
     <div class="section-head">
       <div class="eyebrow">Policy and Community Outcomes</div>
       <h2>Strategic Plan: Goals & Objectives</h2>
-      <p>Our program work drives measurable results, and those results advance the Strategic Plan goals and objectives that move our community forward.</p>
+      <p>Our program work drives measurable results, and those results advance the Strategic Plan goals and objectives that move our community forward. Expand a Goal to see its Objectives.</p>
     </div>
 
     <div class="drill-col">
-      <div class="drill-col-body" id="goal-tree" style="padding-top:8px;"></div>
+      <div class="drill-col-head">
+        <h3>Every Strategic Plan Goal, drilled down to its Objectives</h3>
+      </div>
+      <div class="drill-col-body" id="goal-tree"></div>
     </div>
   </div>
 
@@ -630,24 +626,44 @@ function renderWorkSystemTree(){
   wireDetailButtons(root);
 }
 
-/* ---------- Strategic Plan reference (Goals → Objectives) ---------- */
+/* ---------- Strategic Plan reference (Goals → Objectives) ----------
+   Same accordion pattern as Work Systems → Key Services: a Goal is
+   the top-level expandable node (like a Work System), and its
+   Objectives render as leaf cards underneath (like Programs). Both
+   Goals and Objectives use the plain (blue) box-tag rather than gold,
+   since neither carries its own distinct measures — they're aggregate
+   levels, same as Work Systems, per the original framework legend. */
 function renderGoalTree(){
   const root = document.getElementById('goal-tree');
+
   root.innerHTML = DATA.goals.map(g=>{
     const objs = DATA.objectives.filter(o=>o.goal===g.id);
+
+    const objHTML = objs.length
+      ? objs.map(o=>`
+          <div class="leaf-card">
+            <span class="box-tag">Objective</span>
+            <span style="flex:1;">${o.name}</span>
+          </div>
+        `).join('')
+      : `<div class="empty-note">No objectives recorded under this Goal yet.</div>`;
+
     return `
-      <div class="goal-block">
-        <div class="goal-head">
-          <span class="goal-dot" style="background:${g.color}"></span>
-          <span class="name">${g.name}</span>
-          <span class="count">${objs.length} objective${objs.length!==1?'s':''}</span>
+      <div class="node-item ws-node">
+        <div class="node-header" role="button" tabindex="0">
+          <span class="left">
+            <span class="goal-dot" style="background:${g.color}"></span>
+            <span class="box-tag">Goal</span>
+            <span class="name">${g.name}</span>
+          </span>
+          <span class="meta">${objs.length} objective${objs.length!==1?'s':''} <span class="chevron">▾</span></span>
         </div>
-        <div class="obj-list">
-          ${objs.map(o=>`<div class="obj">${o.name}</div>`).join('') || '<div class="obj">No objectives listed yet.</div>'}
-        </div>
+        <div class="node-body">${objHTML}</div>
       </div>
     `;
   }).join('');
+
+  wireAccordions(root);
 }
 
 function wireAccordions(scope){
