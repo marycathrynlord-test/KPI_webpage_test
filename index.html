@@ -154,8 +154,24 @@
   .stat-card .n{font-size:26px;font-weight:700;color:var(--forest-dark);}
   .stat-card .l{font-size:11.5px;color:var(--slate);margin-top:4px;}
   .stat-breakdown{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:5px;text-align:left;}
-  .mini-status{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--ink);}
+  .mini-status{
+    display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--ink);
+    cursor:help; width:fit-content; border-bottom:1px dotted transparent; transition:border-color .15s ease;
+  }
+  .mini-status:hover, .mini-status:focus-visible{ border-bottom-color:var(--slate); outline:none; }
   .mini-status .status-dot{width:7px;height:7px;flex:none;}
+
+  /* ---------- Hover tooltip (status breakdown detail) ---------- */
+  .hover-tooltip{
+    position:fixed; z-index:1100; background:var(--white); border:1px solid var(--line); border-radius:9px;
+    box-shadow:0 12px 32px rgba(0,0,0,.16); padding:11px 13px; font-size:12px; max-width:260px;
+    opacity:0; pointer-events:none; transform:translateY(4px); transition:opacity .15s ease, transform .15s ease;
+  }
+  .hover-tooltip.visible{ opacity:1; transform:translateY(0); }
+  .tt-head{ display:flex; align-items:center; gap:7px; font-weight:700; color:var(--forest-dark); margin-bottom:7px; }
+  .tt-head .status-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .tt-list{ margin:0; padding-left:16px; display:flex; flex-direction:column; gap:4px; color:var(--ink); }
+  .tt-list li{ font-size:11.5px; line-height:1.4; }
 
   /* ---------- Accordion tree (shared) ---------- */
   .drill-col{background:var(--white); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
@@ -291,6 +307,9 @@
       <div class="drill-col-body" id="goal-tree" style="padding-top:8px;"></div>
     </div>
   </div>
+
+  <!-- Shared hover tooltip for status breakdown rows in the at-a-glance cards -->
+  <div class="hover-tooltip" id="hover-tooltip" role="tooltip"></div>
 
   <!-- DETAIL MODAL (shared by every Key Service / Program "Details" button) -->
   <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
@@ -462,18 +481,67 @@ function statusDotColor(status){
        : '#9AA6A2';
 }
 
+let tooltipRegistry = {};
+let tooltipCounter = 0;
+
 function statusBreakdownHTML(items, statusFn){
-  const counts = { 'on-track':0, 'at-risk':0, 'off-track':0, 'no-data':0 };
-  items.forEach(item => counts[statusFn(item)]++);
-  const rows = Object.entries(counts)
-    .filter(([,n]) => n > 0)
-    .map(([status,n]) => `
-      <span class="mini-status">
-        <span class="status-dot" style="background:${statusDotColor(status)}"></span>
-        ${n} ${STATUS_META[status].label}
-      </span>
-    `).join('');
+  const groups = { 'on-track':[], 'at-risk':[], 'off-track':[], 'no-data':[] };
+  items.forEach(item => groups[statusFn(item)].push(item.name));
+
+  const rows = Object.entries(groups)
+    .filter(([,names]) => names.length > 0)
+    .map(([status,names]) => {
+      const tipId = `tip-${tooltipCounter++}`;
+      tooltipRegistry[tipId] = { status, names };
+      const namesForLabel = names.join(', ');
+      return `
+        <span class="mini-status" data-tip-id="${tipId}" tabindex="0" aria-label="${STATUS_META[status].label}: ${namesForLabel}">
+          <span class="status-dot" style="background:${statusDotColor(status)}"></span>
+          ${names.length} ${STATUS_META[status].label}
+        </span>
+      `;
+    }).join('');
   return `<div class="stat-breakdown">${rows}</div>`;
+}
+
+function showTooltip(target, tipId){
+  const info = tooltipRegistry[tipId];
+  if(!info) return;
+  const tooltip = document.getElementById('hover-tooltip');
+
+  tooltip.innerHTML = `
+    <div class="tt-head">
+      <span class="status-dot" style="background:${statusDotColor(info.status)}"></span>
+      ${STATUS_META[info.status].label} (${info.names.length})
+    </div>
+    <ul class="tt-list">${info.names.map(n=>`<li>${n}</li>`).join('')}</ul>
+  `;
+
+  const rect = target.getBoundingClientRect();
+  tooltip.style.left = `${rect.left}px`;
+  tooltip.style.top = `${rect.bottom + 8}px`;
+  tooltip.classList.add('visible');
+
+  // Keep it on-screen: nudge left if it would overflow the right edge.
+  requestAnimationFrame(()=>{
+    const tRect = tooltip.getBoundingClientRect();
+    if(tRect.right > window.innerWidth - 12){
+      tooltip.style.left = `${Math.max(12, window.innerWidth - tRect.width - 12)}px`;
+    }
+  });
+}
+
+function hideTooltip(){
+  document.getElementById('hover-tooltip').classList.remove('visible');
+}
+
+function wireStatusTooltips(scope){
+  scope.querySelectorAll('.mini-status[data-tip-id]').forEach(el=>{
+    el.addEventListener('mouseenter', ()=> showTooltip(el, el.dataset.tipId));
+    el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('focus', ()=> showTooltip(el, el.dataset.tipId));
+    el.addEventListener('blur', hideTooltip);
+  });
 }
 
 function renderStatusLegend(){
@@ -498,6 +566,8 @@ function renderStats(){
       ${s.breakdown || ''}
     </div>
   `).join('');
+
+  wireStatusTooltips(document.getElementById('stat-grid'));
 }
 
 /* ---------- Work System → Key Service → Program tree ---------- */
