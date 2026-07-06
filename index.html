@@ -841,11 +841,12 @@ function renderStatusLegend(){
 /* ---------- At-a-glance stats ---------- */
 function renderStats(){
   const stats = [
+    { n: DATA.goals.length, l: 'Strategic Plan Goals', breakdown: statusBreakdownHTML(DATA.goals, goalProgramViewStatus) },
+    { n: DATA.objectives.length, l: 'Objectives', breakdown: statusBreakdownHTML(DATA.objectives, objectiveStatus) },
     { n: DATA.workSystems.length, l: 'Work Systems', breakdown: statusBreakdownHTML(DATA.workSystems, workSystemStatus) },
     { n: DATA.keyServices.length, l: 'Key Services', breakdown: statusBreakdownHTML(DATA.keyServices, keyServiceStatus) },
     { n: DATA.programs.length, l: 'Programs', breakdown: statusBreakdownHTML(DATA.programs, programStatus) },
-    { n: DATA.goals.length, l: 'Strategic Plan Goals', breakdown: statusBreakdownHTML(DATA.goals, goalProgramViewStatus) },
-    { n: DATA.objectives.length, l: 'Objectives', breakdown: statusBreakdownHTML(DATA.objectives, objectiveStatus) },
+    
   ];
   document.getElementById('stat-grid').innerHTML = stats.map(s=>`
     <div class="stat-card">
