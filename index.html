@@ -236,6 +236,12 @@
   .export-btn:hover{ background:var(--forest); color:#fff; }
   .export-btn:disabled{ opacity:.55; cursor:progress; }
   .export-btn:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+  .export-select{
+    font-size:13px; font-weight:600; color:var(--ink); font-family:inherit;
+    border:1.5px solid var(--line); background:var(--white); border-radius:8px;
+    padding:7px 10px; cursor:pointer;
+  }
+  .export-select:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
 
   /* ---------- Headline synthesis banner ---------- */
   .headline-banner{
@@ -337,6 +343,10 @@
       <br> They measure progress toward our strategic goals and help ensure accountability to the community.
       <br>Ultimately, KPIs help answer the question: Are we moving in the right direction?</p>
     <div class="export-bar">
+      <label for="export-scope-select" style="font-size:12.5px; color:var(--slate); display:flex; align-items:center; gap:8px;">
+        Export scope:
+        <select id="export-scope-select" class="export-select"></select>
+      </label>
       <button class="export-btn" id="export-csv-btn">⬇ Export CSV</button>
       <button class="export-btn" id="export-pdf-btn">⬇ Export PDF (Goals Chart)</button>
     </div>
@@ -1116,34 +1126,61 @@ function todayStamp(){
   return new Date().toISOString().slice(0,10);
 }
 
+function slugify(str){
+  return str.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+
+function getExportScope(){
+  const select = document.getElementById('export-scope-select');
+  return select ? select.value : 'all';
+}
+
+function renderExportScopeSelect(){
+  const select = document.getElementById('export-scope-select');
+  const options = ['<option value="all">All Goals</option>']
+    .concat(DATA.goals.map(g=>`<option value="${g.id}">${g.name}</option>`));
+  select.innerHTML = options.join('');
+}
+
 function exportCSV(){
+  const scope = getExportScope();
   const rows = [['Type','Name','Status','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated']];
 
-  DATA.goals.forEach(g=>{
+  const scopedGoals = scope === 'all' ? DATA.goals : DATA.goals.filter(g=>g.id===scope);
+
+  scopedGoals.forEach(g=>{
     rows.push(['Goal', g.name, `Key Services: ${goalKeyServiceViewStatus(g)} | Programs: ${goalProgramViewStatus(g)}`, '', '', '', '']);
-  });
-  DATA.objectives.forEach(o=>{
-    const goalName = DATA.goals.find(g=>g.id===o.goal);
-    rows.push(['Objective', o.name, objectiveStatus(o), goalName ? goalName.name : '', '', '', '']);
-  });
-  DATA.keyServices.forEach(k=>{
-    const goalNames = (k.goals||[]).map(gid=>DATA.goals.find(g=>g.id===gid)).filter(Boolean).map(g=>g.name).join('; ');
-    const ws = DATA.workSystems.find(w=>w.id===k.workSystem);
-    rows.push(['Key Service', k.name, keyServiceStatus(k), goalNames, '', ws ? ws.name : '', k.statusUpdated || '']);
-  });
-  DATA.programs.forEach(p=>{
-    const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
-    rows.push(['Program', p.name, programStatus(p), '', obNames, '', '']);
+
+    const objs = DATA.objectives.filter(o=>o.goal===g.id);
+    objs.forEach(o=>{
+      rows.push(['Objective', o.name, objectiveStatus(o), g.name, '', '', '']);
+    });
+
+    const alignedKS = DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id));
+    alignedKS.forEach(k=>{
+      const goalNames = (k.goals||[]).map(gid=>DATA.goals.find(gg=>gg.id===gid)).filter(Boolean).map(gg=>gg.name).join('; ');
+      const ws = DATA.workSystems.find(w=>w.id===k.workSystem);
+      rows.push(['Key Service', k.name, keyServiceStatus(k), goalNames, '', ws ? ws.name : '', k.statusUpdated || '']);
+    });
+
+    const objIds = objs.map(o=>o.id);
+    const scopedPrograms = DATA.programs.filter(p=>Array.isArray(p.objectives) && p.objectives.some(oid=>objIds.includes(oid)));
+    scopedPrograms.forEach(p=>{
+      const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
+      rows.push(['Program', p.name, programStatus(p), '', obNames, '', '']);
+    });
   });
 
   const csv = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
-  downloadBlob(csv, `durango-dashboard-data-${todayStamp()}.csv`, 'text/csv;charset=utf-8;');
+  const scopeName = scope === 'all' ? 'all-goals' : slugify(DATA.goals.find(g=>g.id===scope).name);
+  downloadBlob(csv, `durango-dashboard-${scopeName}-${todayStamp()}.csv`, 'text/csv;charset=utf-8;');
 }
 
 /* ---------- Export: PDF ----------
-   Captures the Goal comparison bars (the one real chart on this page)
-   as an image and drops it into a generated PDF. Degrades gracefully
-   if html2canvas/jsPDF failed to load from the CDN. */
+   Captures either the full Goal comparison strip, or — when a specific
+   Goal is selected in the scope dropdown — just that one Goal's card,
+   as an image dropped into a generated PDF. Degrades gracefully if
+   html2canvas/jsPDF failed to load from the CDN. */
 async function exportPDF(){
   const btn = document.getElementById('export-pdf-btn');
   const originalText = btn.textContent;
@@ -1153,11 +1190,25 @@ async function exportPDF(){
     return;
   }
 
+  const scope = getExportScope();
+  let target, title;
+  if(scope === 'all'){
+    target = document.getElementById('goal-summary');
+    title = 'City of Durango — Strategic Plan Goals Snapshot';
+  } else {
+    target = document.querySelector(`[data-goal-jump="${scope}"]`);
+    const g = DATA.goals.find(gg=>gg.id===scope);
+    title = `City of Durango — ${g ? g.name : 'Goal'} Snapshot`;
+  }
+  if(!target){
+    alert('Could not find that Goal on the page to export. Try refreshing and selecting it again.');
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '⏳ Generating…';
 
   try{
-    const target = document.getElementById('goal-summary');
     const canvas = await html2canvas(target, { scale:2, backgroundColor:'#FBFCFB' });
     const imgData = canvas.toDataURL('image/png');
 
@@ -1167,7 +1218,7 @@ async function exportPDF(){
     const margin = 30;
 
     pdf.setFontSize(14);
-    pdf.text('City of Durango — Strategic Plan Goals Snapshot', margin, margin);
+    pdf.text(title, margin, margin);
     pdf.setFontSize(9);
     pdf.text(`Generated ${new Date().toLocaleString('en-US')}`, margin, margin + 16);
 
@@ -1175,7 +1226,8 @@ async function exportPDF(){
     const imgHeight = canvas.height * imgWidth / canvas.width;
     pdf.addImage(imgData, 'PNG', margin, margin + 30, imgWidth, imgHeight);
 
-    pdf.save(`durango-goals-chart-${todayStamp()}.pdf`);
+    const scopeName = scope === 'all' ? 'all-goals' : slugify(DATA.goals.find(g=>g.id===scope).name);
+    pdf.save(`durango-${scopeName}-chart-${todayStamp()}.pdf`);
   } catch(err){
     alert('Something went wrong generating the PDF. Try again, or use Export CSV instead.\n\nTechnical detail: ' + err.message);
   } finally {
@@ -1185,6 +1237,7 @@ async function exportPDF(){
 }
 
 function wireExportButtons(){
+  renderExportScopeSelect();
   document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
   document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
 }
