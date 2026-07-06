@@ -408,17 +408,7 @@
   <!-- HEADLINE SYNTHESIS -->
   <div class="headline-banner" id="headline-banner"></div>
 
-  <!-- GOAL COMPARISON STRIP (overview — click a card to jump to its detail below) -->
-  <div class="section" style="margin-top:28px;">
-    <div class="section-head">
-      <div class="eyebrow">Strategic Plan</div>
-      <h2>Goals at a glance, worst first</h2>
-      <p>Each bar shows the mix of On Track / At Risk / Off Track Objectives behind that Goal. Click a card to jump to its full detail below.</p>
-    </div>
-    <div class="goal-summary-grid" id="goal-summary"></div>
-  </div>
-
-   <!-- ORGANIZATION AT A GLANCE -->
+   <!-- The City of Durango at a glance -->
   <div class="section">
     <div class="section-head">
       <div class="eyebrow">The City of Durango</div>
@@ -428,10 +418,48 @@
     <div class="stat-grid" id="stat-grid"></div>
   </div>
 
-  <!-- WORK SYSTEM → KEY SERVICE (primary internal view — staff's own operational structure) -->
+  <!-- System Definitions  -->
+
+       <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
+      <div class="status-defs" style="margin:0 20px 20px;">
+        <div class="def-row"><dt>Strategic Plan —</dt> <dd>High-level community outcomes and priorities.​</dd></div>
+        <div class="def-row"><dt>Key Work System —</dt> <dd></dd>Major operational systems that create City value.​</dd></div>
+        <div class="def-row"><dt>Key Services —</dt> <dd>Core services delivered to residents and stakeholders.​</dd></div>
+        <div class="def-row"><dt>Programs —</dt> <dd>Operational activities and service delivery functions.​</dd></div>
+      </div>
+ <!-- Progress key  -->
+
+       <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
+      <div class="status-defs" style="margin:0 20px 20px;">
+        <div class="def-row"><dt>On Track —</dt> <dd>performance is at or above target, or within an agreed tolerance (e.g. within 5%).</dd></div>
+        <div class="def-row"><dt>At Risk —</dt> <dd>performance is below target but recoverable — within a moderate gap (e.g. 5–15% off target) or trending toward target.</dd></div>
+        <div class="def-row"><dt>Off Track —</dt> <dd>performance is significantly below target (e.g. more than 15% off) or has declined for two or more consecutive reporting periods.</dd></div>
+        <div class="def-row"><dt>No Data —</dt> <dd>no current measure has been recorded for this item.</dd></div>
+        <div class="def-row" style="margin-top:8px;"><dt>⏱ Stale —</dt> <dd>this item's status hasn't been updated in over 45 days; treat the badge as unverified until refreshed.</dd></div>
+      </div>
+
+  <!-- Strategic Plan — Community View  -->
+  <div class="section" id="goal-drill">
+    <div class="section-head">
+      <div class="eyebrow">Strategic Plan — Community View</div>
+      <h2>Strategic Plan Goals → Objectives → Programs</h2>
+      <p>The policy side of the same work, viewed top-down: start at a Goal, see its Objectives, and see the Programs each Objective rolls up from. </p>
+    </div>
+
+    <div class="drill-col">
+      <div class="drill-col-head">
+        <div class="heatmap-breadcrumb" id="heatmap-breadcrumb"></div>
+      </div>
+      <div class="heatmap-body">
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Structure — Org View -->
   <div class="section" id="worksystems">
     <div class="section-head">
-      <div class="eyebrow">Operational Structure — Primary View</div>
+      <div class="eyebrow">Operational Structure — Organization View</div>
       <h2>Work Systems → Key Services</h2>
       <p>Start with your own Work System and drill into its Key Services. Click a Key Service to see its full detail, including any Programs related to it.</p>
     </div>
@@ -445,34 +473,6 @@
       </div>
     </div>
   </div>
-
-  <!-- STRATEGIC PLAN GOAL → KEY SERVICES & OBJECTIVES → PROGRAMS (secondary view — see both prongs converge on a Goal) -->
-  <div class="section" id="goal-drill">
-    <div class="section-head">
-      <div class="eyebrow">Strategic Plan — Secondary View</div>
-      <h2>Strategic Plan Goals → Objectives → Programs</h2>
-      <p>The policy side of the same work, viewed top-down: start at a Goal, see its Objectives, and see the Programs each Objective rolls up from. Key Service detail lives in the primary Work Systems view above.</p>
-    </div>
-
-    <div class="drill-col">
-      <div class="drill-col-head">
-        <div class="heatmap-breadcrumb" id="heatmap-breadcrumb"></div>
-      </div>
-      <div class="heatmap-body">
-        <div class="heatmap-grid" id="heatmap-grid"></div>
-      </div>
-      <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
-      <div class="status-defs" style="margin:0 20px 20px;">
-        <div class="def-row"><dt>On Track —</dt> <dd>performance is at or above target, or within an agreed tolerance (e.g. within 5%).</dd></div>
-        <div class="def-row"><dt>At Risk —</dt> <dd>performance is below target but recoverable — within a moderate gap (e.g. 5–15% off target) or trending toward target.</dd></div>
-        <div class="def-row"><dt>Off Track —</dt> <dd>performance is significantly below target (e.g. more than 15% off) or has declined for two or more consecutive reporting periods.</dd></div>
-        <div class="def-row"><dt>No Data —</dt> <dd>no current measure has been recorded for this item.</dd></div>
-        <div class="def-row" style="margin-top:8px;"><dt>⏱ Stale —</dt> <dd>this item's status hasn't been updated in over 45 days; treat the badge as unverified until refreshed.</dd></div>
-      </div>
-    </div>
-  </div>
-
- 
   <!-- Hover tooltip for status breakdown in at-a-glance cards -->
   <div class="hover-tooltip" id="hover-tooltip" role="tooltip"></div>
 
