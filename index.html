@@ -1177,10 +1177,38 @@ function exportCSV(){
 }
 
 /* ---------- Export: PDF ----------
-   Captures either the full Goal comparison strip, or — when a specific
-   Goal is selected in the scope dropdown — just that one Goal's card,
-   as an image dropped into a generated PDF. Degrades gracefully if
-   html2canvas/jsPDF failed to load from the CDN. */
+   Captures the Goal comparison chart AND the full drill-down tree below
+   it (Key Services, Objectives, Programs) — whichever Goal is scoped,
+   or everything if "All Goals" is selected. Whatever's currently
+   collapsed gets temporarily expanded so nothing is cut off, then
+   restored to exactly how it was once the PDF is generated. Degrades
+   gracefully if html2canvas/jsPDF failed to load from the CDN. */
+
+// Adds a canvas image to the PDF, slicing it across as many pages as
+// needed when it's taller than one page (the standard html2canvas +
+// jsPDF pagination trick: place the same image at successive negative
+// offsets so each page reveals the next slice).
+function addCanvasPaginated(pdf, canvas, margin){
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imgData = canvas.toDataURL('image/png');
+  const imgWidth = pageWidth - margin*2;
+  const imgHeight = canvas.height * imgWidth / canvas.width;
+  const usableHeight = pageHeight - margin*2;
+
+  let heightLeft = imgHeight;
+  let position = margin;
+  pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+  heightLeft -= usableHeight;
+
+  while(heightLeft > 0){
+    position = margin - (imgHeight - heightLeft);
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+    heightLeft -= usableHeight;
+  }
+}
+
 async function exportPDF(){
   const btn = document.getElementById('export-pdf-btn');
   const originalText = btn.textContent;
@@ -1191,16 +1219,18 @@ async function exportPDF(){
   }
 
   const scope = getExportScope();
-  let target, title;
+  let chartTarget, drillTarget, title;
   if(scope === 'all'){
-    target = document.getElementById('goal-summary');
+    chartTarget = document.getElementById('goal-summary');
+    drillTarget = document.getElementById('ws-tree');
     title = 'City of Durango — Strategic Plan Goals Snapshot';
   } else {
-    target = document.querySelector(`[data-goal-jump="${scope}"]`);
+    chartTarget = document.querySelector(`[data-goal-jump="${scope}"]`);
+    drillTarget = document.getElementById(`goalnode-${scope}`);
     const g = DATA.goals.find(gg=>gg.id===scope);
     title = `City of Durango — ${g ? g.name : 'Goal'} Snapshot`;
   }
-  if(!target){
+  if(!chartTarget || !drillTarget){
     alert('Could not find that Goal on the page to export. Try refreshing and selecting it again.');
     return;
   }
@@ -1208,29 +1238,45 @@ async function exportPDF(){
   btn.disabled = true;
   btn.textContent = '⏳ Generating…';
 
+  // Temporarily expand every collapsed node inside the drill-down target
+  // so the capture shows everything, then restore original state after.
+  const nodesTouched = scope === 'all'
+    ? [...drillTarget.querySelectorAll('.node-item')]
+    : [drillTarget, ...drillTarget.querySelectorAll('.node-item')];
+  const wasOpen = nodesTouched.map(n => n.classList.contains('open'));
+  nodesTouched.forEach(n => n.classList.add('open'));
+
   try{
-    const canvas = await html2canvas(target, { scale:2, backgroundColor:'#FBFCFB' });
-    const imgData = canvas.toDataURL('image/png');
+    // Let the CSS max-height transition finish before capturing, or the
+    // screenshot can catch it mid-animation and cut content off.
+    await new Promise(r => setTimeout(r, 400));
+
+    const chartCanvas = await html2canvas(chartTarget, { scale:2, backgroundColor:'#FBFCFB' });
+    const drillCanvas = await html2canvas(drillTarget, { scale:2, backgroundColor:'#FBFCFB' });
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation:'landscape', unit:'pt', format:'letter' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 30;
 
     pdf.setFontSize(14);
     pdf.text(title, margin, margin);
     pdf.setFontSize(9);
     pdf.text(`Generated ${new Date().toLocaleString('en-US')}`, margin, margin + 16);
+    pdf.addImage(chartCanvas.toDataURL('image/png'), 'PNG', margin, margin + 30,
+      pdf.internal.pageSize.getWidth() - margin*2,
+      chartCanvas.height * (pdf.internal.pageSize.getWidth() - margin*2) / chartCanvas.width);
 
-    const imgWidth = pageWidth - margin*2;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    pdf.addImage(imgData, 'PNG', margin, margin + 30, imgWidth, imgHeight);
+    pdf.addPage();
+    pdf.setFontSize(14);
+    pdf.text(`${title} — Drill-Down Detail`, margin, margin);
+    addCanvasPaginated(pdf, drillCanvas, margin + 24);
 
     const scopeName = scope === 'all' ? 'all-goals' : slugify(DATA.goals.find(g=>g.id===scope).name);
     pdf.save(`durango-${scopeName}-chart-${todayStamp()}.pdf`);
   } catch(err){
     alert('Something went wrong generating the PDF. Try again, or use Export CSV instead.\n\nTechnical detail: ' + err.message);
   } finally {
+    nodesTouched.forEach((n,i) => { if(!wasOpen[i]) n.classList.remove('open'); });
     btn.disabled = false;
     btn.textContent = originalText;
   }
