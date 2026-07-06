@@ -226,6 +226,13 @@
   .node-item.dimmed{opacity:.25; transition:opacity .2s ease;}
   .leaf-card.dimmed{opacity:.25; transition:opacity .2s ease;}
 
+  /* ---------- Trend arrow and sparkline ---------- */
+  .trend-arrow{font-size:13px; font-weight:700; flex:none; cursor:help;}
+  .modal-trend{margin-top:14px; padding-top:14px; border-top:1px solid var(--line);}
+  .modal-trend:empty{display:none;}
+  .modal-trend-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--slate); margin-bottom:8px;}
+  .modal-trend-summary{font-size:12.5px; color:var(--ink); margin-top:6px;}
+
   /* ---------- Export toolbar ---------- */
   .export-bar{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
   .export-btn{
@@ -418,6 +425,7 @@
       <p class="modal-desc" id="modal-desc"></p>
       <div class="modal-meta" id="modal-meta"></div>
       <div class="modal-metrics" id="modal-metrics"></div>
+      <div class="modal-trend" id="modal-trend"></div>
     </div>
   </div>
 
@@ -540,6 +548,68 @@ const STATUS_META = {
   'off-track': { label: 'Off Track' },
   'no-data':   { label: 'No Data' },
 };
+
+/* ---------- Trend (Baldrige LeTCI's "Trends" dimension) ----------
+   Only Key Services and Programs carry a real, authored history —
+   Goals and Objectives are computed rollups, so a genuine trend for
+   them would require historical snapshots of every child at each past
+   date, which isn't being tracked yet. This intentionally only shows
+   trend where real history exists, rather than faking one. */
+const STATUS_SEVERITY = { 'off-track':0, 'at-risk':1, 'on-track':2, 'no-data':1 };
+
+// Compares the two most recent history entries to say whether things
+// are moving in the right direction, the wrong direction, or holding
+// steady. Returns null if there's no history or too few points to compare.
+function computeTrend(history){
+  if(!Array.isArray(history) || history.length < 2) return null;
+  const last = STATUS_SEVERITY[history[history.length-1].status];
+  const prev = STATUS_SEVERITY[history[history.length-2].status];
+  if(last > prev) return 'improving';
+  if(last < prev) return 'declining';
+  return 'flat';
+}
+
+const TREND_META = {
+  improving: { arrow:'▲', color:'#1B8A79', label:'Improving' },
+  declining: { arrow:'▼', color:'#C1443B', label:'Declining' },
+  flat:      { arrow:'▬', color:'#9AA6A2', label:'Flat' },
+};
+
+function trendArrowHTML(item){
+  const trend = computeTrend(item.history);
+  if(!trend) return '';
+  const m = TREND_META[trend];
+  return `<span class="trend-arrow" style="color:${m.color}" title="Trend: ${m.label} (based on the last two updates)">${m.arrow}</span>`;
+}
+
+// Small hand-rolled SVG sparkline — deliberately not a charting library,
+// since a single line with a handful of points doesn't need one, and it
+// keeps this feature free of any CDN-blocking risk.
+function sparklineSVG(history){
+  if(!Array.isArray(history) || history.length < 2) return '';
+  const w = 240, h = 56, padX = 10, padY = 10;
+  const n = history.length;
+  const stepX = (w - padX*2) / (n-1);
+  const points = history.map((entry,i)=>{
+    const sev = STATUS_SEVERITY[entry.status] ?? 1;
+    return {
+      x: padX + i*stepX,
+      y: padY + (2-sev)/2 * (h - padY*2),
+      status: entry.status,
+      date: entry.date,
+    };
+  });
+  const linePath = points.map((p,i)=> (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const dots = points.map(p=>
+    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${statusDotColor(p.status)}"><title>${p.date}: ${STATUS_META[p.status].label}</title></circle>`
+  ).join('');
+  return `
+    <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Status trend over time">
+      <path d="${linePath}" fill="none" stroke="#9AA6A2" stroke-width="1.5" opacity="0.6"/>
+      ${dots}
+    </svg>
+  `;
+}
 
 // Given a list of statuses, return the single most urgent one.
 // "no-data" entries are ignored unless every entry is no-data.
@@ -890,6 +960,7 @@ function renderStrategicTree(){
                     <span style="flex:1;">${p.name}</span>
                     ${obTags}
                     ${primaryMetricHTML(p)}
+                    ${trendArrowHTML(p)}
                     ${statusBadgeHTML(programStatus(p))}
                     <button class="detail-btn" data-kind="program" data-id="${p.id}">Details</button>
                   </div>
@@ -907,6 +978,7 @@ function renderStrategicTree(){
                   ${ws ? `<span class="align-tag">${ws.name}</span>` : ''}
                   ${primaryMetricHTML(ks)}
                   ${staleFlagHTML(ks)}
+                  ${trendArrowHTML(ks)}
                   ${statusBadgeHTML(ksStatus)}
                 </span>
                 <span class="meta">${relatedProgs.length} related program${relatedProgs.length!==1?'s':''}
@@ -932,6 +1004,7 @@ function renderStrategicTree(){
                   <span class="box-tag gold">Program</span>
                   <span style="flex:1;">${p.name}</span>
                   ${primaryMetricHTML(p)}
+                  ${trendArrowHTML(p)}
                   ${statusBadgeHTML(programStatus(p))}
                   <button class="detail-btn" data-kind="program" data-id="${p.id}">Details</button>
                 </div>
@@ -1079,6 +1152,19 @@ function openDetailModal(kind, id){
     </div>
   `).join('');
 
+  const trendBox = document.getElementById('modal-trend');
+  const trend = computeTrend(item.history);
+  if(trend){
+    const m = TREND_META[trend];
+    trendBox.innerHTML = `
+      <div class="modal-trend-label">Trend</div>
+      ${sparklineSVG(item.history)}
+      <div class="modal-trend-summary"><span style="color:${m.color}; font-weight:700;">${m.arrow} ${m.label}</span> over the last ${item.history.length} updates</div>
+    `;
+  } else {
+    trendBox.innerHTML = '';
+  }
+
   const overlay = document.getElementById('modal-overlay');
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
@@ -1144,30 +1230,32 @@ function renderExportScopeSelect(){
 
 function exportCSV(){
   const scope = getExportScope();
-  const rows = [['Type','Name','Status','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated']];
+  const rows = [['Type','Name','Status','Trend','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated']];
+
+  const trendLabel = item => { const t = computeTrend(item.history); return t ? TREND_META[t].label : ''; };
 
   const scopedGoals = scope === 'all' ? DATA.goals : DATA.goals.filter(g=>g.id===scope);
 
   scopedGoals.forEach(g=>{
-    rows.push(['Goal', g.name, `Key Services: ${goalKeyServiceViewStatus(g)} | Programs: ${goalProgramViewStatus(g)}`, '', '', '', '']);
+    rows.push(['Goal', g.name, `Key Services: ${goalKeyServiceViewStatus(g)} | Programs: ${goalProgramViewStatus(g)}`, '', '', '', '', '']);
 
     const objs = DATA.objectives.filter(o=>o.goal===g.id);
     objs.forEach(o=>{
-      rows.push(['Objective', o.name, objectiveStatus(o), g.name, '', '', '']);
+      rows.push(['Objective', o.name, objectiveStatus(o), '', g.name, '', '', '']);
     });
 
     const alignedKS = DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(g.id));
     alignedKS.forEach(k=>{
       const goalNames = (k.goals||[]).map(gid=>DATA.goals.find(gg=>gg.id===gid)).filter(Boolean).map(gg=>gg.name).join('; ');
       const ws = DATA.workSystems.find(w=>w.id===k.workSystem);
-      rows.push(['Key Service', k.name, keyServiceStatus(k), goalNames, '', ws ? ws.name : '', k.statusUpdated || '']);
+      rows.push(['Key Service', k.name, keyServiceStatus(k), trendLabel(k), goalNames, '', ws ? ws.name : '', k.statusUpdated || '']);
     });
 
     const objIds = objs.map(o=>o.id);
     const scopedPrograms = DATA.programs.filter(p=>Array.isArray(p.objectives) && p.objectives.some(oid=>objIds.includes(oid)));
     scopedPrograms.forEach(p=>{
       const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
-      rows.push(['Program', p.name, programStatus(p), '', obNames, '', '']);
+      rows.push(['Program', p.name, programStatus(p), trendLabel(p), '', obNames, '', '']);
     });
   });
 
