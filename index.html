@@ -255,17 +255,23 @@
     overflow:hidden;
   }
   .heat-tile:hover, .heat-tile:focus-visible{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.18); outline:none; }
-  .heat-tile.goal-tile:hover, .heat-tile.goal-tile:focus-visible, .heat-tile.goal-tile:active{
-    background: color-mix(in srgb, var(--goal-accent) 32%, white);
-    color: var(--ink);
-  }
 
-  /* ---------- Goal tiles shaped like their own mountain-logo segment ---------- */
+  /* ---------- Goal tiles: muted brand color as base, status as a highlight on top ---------- */
   .heatmap-grid.mountain-grid{ grid-template-columns:repeat(6, 1fr); gap:0; }
   .heat-tile.goal-tile{
     min-height:210px; justify-content:flex-end; padding-bottom:14px; border-radius:0;
+    color: var(--ink); /* base fill is now a light pastel, not a dark status color */
   }
-  .heat-tile.goal-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; }
+  .heat-tile.goal-tile:hover, .heat-tile.goal-tile:focus-visible, .heat-tile.goal-tile:active{
+    background: color-mix(in srgb, var(--goal-accent) 55%, white);
+    color: var(--ink);
+  }
+  .heat-tile.goal-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; background:rgba(0,0,0,.10); }
+  .heat-tile.goal-tile .tile-export-btn:hover{ background:rgba(0,0,0,.18); }
+  .heat-status-highlight{
+    display:inline-flex; align-items:center; padding:3px 10px; border-radius:100px;
+    font-size:10.5px; font-weight:700;
+  }
   /* Below this width, six zero-gap jagged slivers get unreadable — fall
      back to the normal rectangular tile grid instead. */
   @media (max-width:820px){
@@ -639,7 +645,6 @@
       <p>The policy side of the same work, viewed top-down: start at a Goal, see its Objectives, and see the Programs each Objective rolls up from. </p>
     </div>
 
-    <img src="assets/durango-community-goals.png" alt="Durango Community — the six Strategic Plan goal areas: Organizational Stewardship, Innovative Housing & Economic Development, Safety & Quality of Life, Reliable Infrastructure & Community Connectivity, Engaged & Informed Community, Strategic Workforce Development" class="goal-logo-banner">
 
     <div class="drill-col">
       <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
@@ -1305,7 +1310,7 @@ function renderHeatmapBreadcrumb(){
   });
 }
 
-function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='', tileStyle='', extraClass='' }){
+function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='', tileStyle='', extraClass='', statusAsHighlight=false }){
   const trend = trendItem ? computeTrend(trendItem.history) : null;
   const trendHTML = trend ? `<span class="heat-trend" style="color:${trend==='improving'?'#fff':trend==='declining'?'#fff':'#fff'}">${TREND_META[trend].arrow}</span>` : '';
   const exportBtnHTML = exportKind
@@ -1313,13 +1318,20 @@ function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAt
     : '';
   const styleAttr = tileStyle ? ` style="${tileStyle}"` : '';
   const classAttr = `heat-tile status-${status}${extraClass ? ' ' + extraClass : ''}`;
+  // When the tile's own background carries brand color rather than
+  // status color (Goal tiles), the status needs to read as a clear
+  // highlight of its own — a solid colored chip — rather than plain
+  // text that would otherwise blend into a pastel background.
+  const statusLabelHTML = statusAsHighlight
+    ? `<span class="heat-status-highlight" style="background:${statusDotColor(status)}; color:${status==='at-risk' ? '#3a2c05' : '#fff'};">${STATUS_META[status].label}</span>`
+    : `<span>${STATUS_META[status].label}</span>`;
   return `
     <div class="${classAttr}"${styleAttr} role="button" tabindex="0" ${dataAttrs}>
       ${exportBtnHTML}
       <div class="heat-type">${typeLabel}</div>
       <div class="heat-name">${name}</div>
       ${subtitle ? `<div class="heat-subtitle">${subtitle}</div>` : ''}
-      <div class="heat-foot"><span>${STATUS_META[status].label}</span>${trendHTML}${extraFoot}</div>
+      <div class="heat-foot">${statusLabelHTML}${trendHTML}${extraFoot}</div>
     </div>
   `;
 }
@@ -1430,8 +1442,9 @@ function renderHeatmap(){
         typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
         dataAttrs:`data-drill="goal" data-id="${g.id}"`,
         exportKind:'goal', exportId:g.id,
-        tileStyle:`clip-path:${clip}; --goal-accent:${g.color};`,
+        tileStyle:`clip-path:${clip}; --goal-accent:${g.color}; background:color-mix(in srgb, ${g.color} 35%, white);`,
         extraClass:'goal-tile',
+        statusAsHighlight:true,
       });
     }).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
     wireHeatmapTiles(grid);
