@@ -596,9 +596,6 @@
   <!-- CITY SNAPSHOT (renders only if data.json includes a kpis array) -->
   <div class="kpi-grid" id="kpi-grid"></div>
 
-  <!-- HEADLINE SYNTHESIS -->
-  <div class="headline-banner" id="headline-banner"></div>
-
    <!-- The City of Durango at a glance -->
   <div class="section">
     <div class="section-head">
@@ -608,6 +605,9 @@
     </div>
     <div class="stat-grid" id="stat-grid"></div>
   </div>
+
+  <!-- HEADLINE SYNTHESIS -->
+  <div class="headline-banner" id="headline-banner" style="margin-top:28px;"></div>
 
   <!-- Strategic Plan — Community View  -->
   <div class="section" id="goal-drill">
@@ -1083,6 +1083,21 @@ function renderHeadline(){
   banner.innerHTML = `<span class="hb-icon">${icon}</span><span>${html}</span>`;
 }
 
+// Strategic Plan Goals are always shown in this fixed order, regardless
+// of status — Organizational Stewardship, Safety & Quality of Life,
+// Innovative Housing & Economic Development, Reliable Infrastructure &
+// Community Connectivity, Engaged & Informed Community, Strategic
+// Workforce Development. This is a leadership-defined ordering, not a
+// data-driven one, so it's a hardcoded id sequence rather than computed.
+const GOAL_DISPLAY_ORDER = ['g1', 'g3', 'g2', 'g4', 'g5', 'g6'];
+function sortGoalsCanonical(goals){
+  return [...goals].sort((a,b)=>{
+    const ai = GOAL_DISPLAY_ORDER.indexOf(a.id);
+    const bi = GOAL_DISPLAY_ORDER.indexOf(b.id);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
+
 function goalSortWeight(status){
   return status==='off-track' ? 0 : status==='at-risk' ? 1 : status==='on-track' ? 2 : 3;
 }
@@ -1115,7 +1130,7 @@ function goalObjectiveCompositionBar(g){
 }
 
 function renderGoalSummary(){
-  const sorted = [...DATA.goals].sort((a,b)=>goalSortWeight(goalProgramViewStatus(a)) - goalSortWeight(goalProgramViewStatus(b)));
+  const sorted = sortGoalsCanonical(DATA.goals);
   const grid = document.getElementById('goal-summary');
 
   grid.innerHTML = sorted.map(g=>{
@@ -1205,14 +1220,15 @@ function renderHeatmapBreadcrumb(){
   });
 }
 
-function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='' }){
+function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='', tileStyle='' }){
   const trend = trendItem ? computeTrend(trendItem.history) : null;
   const trendHTML = trend ? `<span class="heat-trend" style="color:${trend==='improving'?'#fff':trend==='declining'?'#fff':'#fff'}">${TREND_META[trend].arrow}</span>` : '';
   const exportBtnHTML = exportKind
     ? `<span class="tile-export-btn" role="button" tabindex="0" data-export-kind="${exportKind}" data-export-id="${exportId}" title="Export this ${typeLabel}" aria-label="Export ${name}">⬇</span>`
     : '';
+  const styleAttr = tileStyle ? ` style="${tileStyle}"` : '';
   return `
-    <div class="heat-tile status-${status}" role="button" tabindex="0" ${dataAttrs}>
+    <div class="heat-tile status-${status}"${styleAttr} role="button" tabindex="0" ${dataAttrs}>
       ${exportBtnHTML}
       <div class="heat-type">${typeLabel}</div>
       <div class="heat-name">${name}</div>
@@ -1304,11 +1320,12 @@ function renderHeatmap(){
   renderHeatmapBreadcrumb();
 
   if(heatmapView.level === 'goals'){
-    const sorted = [...DATA.goals].sort((a,b)=>goalSortWeight(goalProgramViewStatus(a)) - goalSortWeight(goalProgramViewStatus(b)));
+    const sorted = sortGoalsCanonical(DATA.goals);
     grid.innerHTML = sorted.map(g=>heatTileHTML({
       typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
       dataAttrs:`data-drill="goal" data-id="${g.id}"`,
       exportKind:'goal', exportId:g.id,
+      tileStyle:`border-top:4px solid ${g.color};`,
     })).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
     wireHeatmapTiles(grid);
     return;
@@ -1681,7 +1698,7 @@ function getExportScope(){
 function renderExportScopeSelect(){
   const select = document.getElementById('export-scope-select');
   const options = ['<option value="all">All Goals</option>']
-    .concat(DATA.goals.map(g=>`<option value="${g.id}">${g.name}</option>`));
+    .concat(sortGoalsCanonical(DATA.goals).map(g=>`<option value="${g.id}">${g.name}</option>`));
   select.innerHTML = options.join('');
 }
 
@@ -1754,7 +1771,7 @@ function exportCSV(){
 
   const trendLabel = item => { const t = computeTrend(item.history); return t ? TREND_META[t].label : ''; };
 
-  const scopedGoals = scope === 'all' ? DATA.goals : DATA.goals.filter(g=>g.id===scope);
+  const scopedGoals = scope === 'all' ? sortGoalsCanonical(DATA.goals) : DATA.goals.filter(g=>g.id===scope);
 
   scopedGoals.forEach(g=>{
     rows.push(['Goal', g.name, goalProgramViewStatus(g), '', '', '', '', '']);
@@ -1901,7 +1918,7 @@ async function exportPDF(){
     }
 
     const goalsToWalk = scope === 'all'
-      ? [...DATA.goals].sort((a,b)=>goalSortWeight(goalProgramViewStatus(a)) - goalSortWeight(goalProgramViewStatus(b)))
+      ? sortGoalsCanonical(DATA.goals)
       : DATA.goals.filter(g=>g.id===scope);
 
     for(const g of goalsToWalk){
