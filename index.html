@@ -301,7 +301,7 @@
   .reference-col-title{margin:0 0 4px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--forest-dark);}
   .reference-col-sub{margin:0 0 16px; font-size:12px; color:var(--slate); line-height:1.5;}
   .goal-logo-banner{display:block; width:100%; max-width:640px; height:auto; margin:8px auto 20px;}
-  .goal-ridge-motif{display:block; width:100%; height:44px; margin:16px 0 4px; border-radius:6px; overflow:hidden;}
+  .goal-ridge-motif{display:block; width:100%; height:auto; max-width:900px; margin:16px auto 4px;}
 
   .ref-row{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line);}
   .ref-row:first-child{padding-top:0;}
@@ -523,7 +523,6 @@
       <h2>Definitions &amp; Indicators</h2>
       <p>A quick glossary of the terms and colors used throughout — the color of each icon below carries through everywhere on the page.</p>
     </div>
-    <img src="assets/durango-community-goals.png" alt="Durango Community — the six Strategic Plan goal areas: Organizational Stewardship, Innovative Housing & Economic Development, Safety & Quality of Life, Reliable Infrastructure & Community Connectivity, Engaged & Informed Community, Strategic Workforce Development" class="goal-logo-banner">
     <div class="reference-grid">
       <div class="reference-col">
         <h3 class="reference-col-title">System Definitions</h3>
@@ -623,14 +622,7 @@
       <p>The policy side of the same work, viewed top-down: start at a Goal, see its Objectives, and see the Programs each Objective rolls up from. </p>
     </div>
 
-    <svg class="goal-ridge-motif" viewBox="0 0 1200 90" preserveAspectRatio="none" aria-hidden="true">
-      <polygon points="0,90 0,55 100,30 200,50 200,90" fill="#b24d93"/>
-      <polygon points="200,90 200,50 300,35 400,45 400,90" fill="#d76528"/>
-      <polygon points="400,90 400,45 500,15 600,25 600,90" fill="#7FB4A9"/>
-      <polygon points="600,90 600,25 700,2 800,35 800,90" fill="#476fb5"/>
-      <polygon points="800,90 800,35 900,40 1000,55 1000,90" fill="#d94849"/>
-      <polygon points="1000,90 1000,55 1100,60 1200,70 1200,90" fill="#867971"/>
-    </svg>
+    <svg class="goal-ridge-motif" id="goal-ridge-motif" viewBox="0 0 1200 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="The six Strategic Plan goal areas, shown as a colored mountain range with each area's name"></svg>
 
     <div class="drill-col">
       <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
@@ -1113,6 +1105,65 @@ function sortGoalsCanonical(goals){
     const bi = GOAL_DISPLAY_ORDER.indexOf(b.id);
     return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
   });
+}
+
+// Generic word-wrap for a Goal name into short lines — not hardcoded
+// per goal, so it stays correct if a name is ever edited in data.json.
+// Aims for roughly even line lengths rather than an exact target.
+function goalNameLines(name){
+  const words = name.split(' ');
+  const lines = [];
+  let current = [];
+  let lineLen = 0;
+  words.forEach(w=>{
+    if(lineLen + w.length > 14 && current.length){
+      lines.push(current.join(' '));
+      current = [];
+      lineLen = 0;
+    }
+    current.push(w);
+    lineLen += w.length + 1;
+  });
+  if(current.length) lines.push(current.join(' '));
+  return lines;
+}
+
+// The recolored mountain-ridge motif — a data-driven callback to the
+// City's official "Durango Community" logo, using each Goal's own
+// brand color (not status) and its real name, always in canonical
+// left-to-right order. Purely decorative; not used for navigation.
+function renderGoalRidgeMotif(){
+  const svg = document.getElementById('goal-ridge-motif');
+  if(!svg) return;
+
+  const goals = sortGoalsCanonical(DATA.goals);
+  const n = goals.length;
+  const width = 1200, height = 280, baseline = height;
+  const segW = width / n;
+
+  // A simple peak/valley height pattern (viewBox y-units, smaller = taller
+  // peak) — sized for 6 goals with a tall central peak like the real
+  // logo; falls back to a gentle flat pattern if the goal count ever
+  // differs, since the exact shape here is decorative, not data-driven.
+  const peaks6 = [90, 100, 50, 10, 115, 175];
+  const valleys6 = [170, 150, 140, 80, 100, 160, 210];
+  const peakAt = i => n === 6 ? peaks6[i] : 120;
+  const valleyAt = i => n === 6 ? valleys6[i] : 160;
+
+  let shapesHTML = '';
+  let labelsHTML = '';
+
+  goals.forEach((g, i)=>{
+    const x0 = i * segW, x1 = (i + 1) * segW, xMid = x0 + segW / 2;
+    const yLeft = valleyAt(i), yPeak = peakAt(i), yRight = valleyAt(i + 1);
+    shapesHTML += `<polygon points="${x0},${baseline} ${x0},${yLeft} ${xMid},${yPeak} ${x1},${yRight} ${x1},${baseline}" fill="${g.color}"/>`;
+
+    const lines = goalNameLines(g.name);
+    const tspans = lines.map((line, li)=>`<tspan x="${xMid}" dy="${li === 0 ? 0 : 18}">${line}</tspan>`).join('');
+    labelsHTML += `<text x="${xMid}" y="195" text-anchor="middle" font-size="16" font-weight="700" fill="#fff" font-family="Aptos,'Segoe UI Variable','Segoe UI',system-ui,sans-serif">${tspans}</text>`;
+  });
+
+  svg.innerHTML = shapesHTML + labelsHTML;
 }
 
 function goalSortWeight(status){
@@ -2128,6 +2179,7 @@ function init(){
   renderKPIs();
   renderHeadline();
   renderStats();
+  renderGoalRidgeMotif();
   renderWsHeatmap();
   renderHeatmap();
   wireExportButtons();
