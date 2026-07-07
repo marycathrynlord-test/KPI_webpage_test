@@ -332,22 +332,34 @@
   .tour-btn.primary{ background:var(--forest); border-color:var(--forest); color:#fff; }
   .tour-btn:disabled{ opacity:.4; cursor:default; }
 
-  /* ---------- Export toolbar ---------- */
-  .export-bar{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+  /* ---------- Export toolbar (subdued — quiet text-link style) ---------- */
+  .export-bar{display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-top:14px; font-size:12.5px; color:var(--slate);}
   .export-btn{
-    display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700;
-    border:1.5px solid var(--forest); background:var(--white); color:var(--forest-dark);
-    padding:9px 16px; border-radius:100px; cursor:pointer; transition:all .15s ease;
+    display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600;
+    border:none; background:none; color:var(--slate); padding:2px 0; cursor:pointer; font-family:inherit;
+    text-decoration:underline; text-decoration-color:transparent; text-underline-offset:3px;
+    transition:color .15s ease, text-decoration-color .15s ease;
   }
-  .export-btn:hover{ background:var(--forest); color:#fff; }
-  .export-btn:disabled{ opacity:.55; cursor:progress; }
-  .export-btn:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+  .export-btn:hover{ color:var(--forest-dark); text-decoration-color:var(--forest-dark); }
+  .export-btn:disabled{ opacity:.5; cursor:progress; text-decoration:none; }
+  .export-btn:focus-visible{ outline:2px solid var(--sage); outline-offset:3px; }
   .export-select{
-    font-size:13px; font-weight:600; color:var(--ink); font-family:inherit;
-    border:1.5px solid var(--line); background:var(--white); border-radius:8px;
-    padding:7px 10px; cursor:pointer;
+    font-size:12.5px; font-weight:500; color:var(--slate); font-family:inherit;
+    border:1px solid var(--line); background:var(--white); border-radius:7px;
+    padding:5px 8px; cursor:pointer;
   }
   .export-select:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+
+  /* ---------- Per-tile export (small, subtle, corner of each heat tile) ---------- */
+  .tile-export-btn{
+    position:absolute; top:7px; right:7px; width:20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:11px; line-height:1;
+    background:rgba(255,255,255,.22); color:inherit; cursor:pointer; opacity:.65;
+    transition:opacity .15s ease, background .15s ease;
+  }
+  .tile-export-btn:hover, .tile-export-btn:focus-visible{ opacity:1; background:rgba(255,255,255,.4); outline:none; }
+  .status-at-risk .tile-export-btn{ background:rgba(0,0,0,.10); }
+  .status-at-risk .tile-export-btn:hover{ background:rgba(0,0,0,.18); }
 
   /* ---------- Headline synthesis banner ---------- */
   .headline-banner{
@@ -1111,16 +1123,20 @@ function renderHeatmapBreadcrumb(){
   });
 }
 
-function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='' }){
+function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='' }){
   const trend = trendItem ? computeTrend(trendItem.history) : null;
   const trendHTML = trend ? `<span class="heat-trend" style="color:${trend==='improving'?'#fff':trend==='declining'?'#fff':'#fff'}">${TREND_META[trend].arrow}</span>` : '';
+  const exportBtnHTML = exportKind
+    ? `<span class="tile-export-btn" role="button" tabindex="0" data-export-kind="${exportKind}" data-export-id="${exportId}" title="Export this ${typeLabel}" aria-label="Export ${name}">⬇</span>`
+    : '';
   return `
-    <button class="heat-tile status-${status}" ${dataAttrs} tabindex="0">
+    <div class="heat-tile status-${status}" role="button" tabindex="0" ${dataAttrs}>
+      ${exportBtnHTML}
       <div class="heat-type">${typeLabel}</div>
       <div class="heat-name">${name}</div>
       ${subtitle ? `<div class="heat-subtitle">${subtitle}</div>` : ''}
       <div class="heat-foot"><span>${STATUS_META[status].label}</span>${trendHTML}${extraFoot}</div>
-    </button>
+    </div>
   `;
 }
 
@@ -1179,6 +1195,7 @@ function renderHeatmap(){
         typeLabel:'Objective', name:o.name, status:objectiveStatus(o), trendItem:null,
         subtitle: g ? g.name : '',
         dataAttrs:`data-drill="objective" data-goal-id="${o.goal}" data-id="${o.id}"`,
+        exportKind:'objective', exportId:o.id,
       });
     }).join('') || `<div class="heatmap-empty">No Objectives recorded yet.</div>`;
     wireHeatmapTiles(grid);
@@ -1195,6 +1212,7 @@ function renderHeatmap(){
         typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
         subtitle: obNames,
         dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
+        exportKind:'program', exportId:p.id,
       });
     }).join('') || `<div class="heatmap-empty">No Programs recorded yet.</div>`;
     wireHeatmapTiles(grid);
@@ -1208,6 +1226,7 @@ function renderHeatmap(){
     grid.innerHTML = sorted.map(g=>heatTileHTML({
       typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
       dataAttrs:`data-drill="goal" data-id="${g.id}"`,
+      exportKind:'goal', exportId:g.id,
     })).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
     wireHeatmapTiles(grid);
     return;
@@ -1222,6 +1241,7 @@ function renderHeatmap(){
     grid.innerHTML = objs.map(o=>heatTileHTML({
       typeLabel:'Objective', name:o.name, status:objectiveStatus(o), trendItem:null,
       dataAttrs:`data-drill="objective" data-goal-id="${g.id}" data-id="${o.id}"`,
+      exportKind:'objective', exportId:o.id,
     })).join('') || `<div class="heatmap-empty">No Objectives recorded under this Goal yet.</div>`;
     wireHeatmapTiles(grid);
     return;
@@ -1236,6 +1256,7 @@ function renderHeatmap(){
     grid.innerHTML = progs.map(p=>heatTileHTML({
       typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
       dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
+      exportKind:'program', exportId:p.id,
     })).join('') || `<div class="heatmap-empty">No Programs recorded under this Objective yet.</div>`;
     wireHeatmapTiles(grid);
     return;
@@ -1244,7 +1265,7 @@ function renderHeatmap(){
 
 function wireHeatmapTiles(scope){
   scope.querySelectorAll('[data-drill]').forEach(tile=>{
-    tile.addEventListener('click', ()=>{
+    const activate = ()=>{
       const kind = tile.dataset.drill;
       // Drilling always returns to the structured, grouped path — even
       // if the click originated from a flat view (e.g. clicking an
@@ -1254,13 +1275,20 @@ function wireHeatmapTiles(scope){
       if(kind === 'goal') heatmapView = { level:'goal', goalId: tile.dataset.id };
       else if(kind === 'objective') heatmapView = { level:'objective', goalId: tile.dataset.goalId, objectiveId: tile.dataset.id };
       renderHeatmap();
+    };
+    tile.addEventListener('click', activate);
+    tile.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
   scope.querySelectorAll('[data-open-detail]').forEach(tile=>{
-    tile.addEventListener('click', ()=>{
-      openDetailModal(tile.dataset.openDetail, tile.dataset.id);
+    const activate = ()=> openDetailModal(tile.dataset.openDetail, tile.dataset.id);
+    tile.addEventListener('click', activate);
+    tile.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
+  wireTileExportButtons(scope);
 }
 
 /* ---------- Work System heatmap navigator (primary internal view) ----------
@@ -1325,6 +1353,7 @@ function renderWsHeatmap(){
         typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
         subtitle: ws ? ws.name : '',
         dataAttrs:`data-open-detail="ks" data-id="${ks.id}"`,
+        exportKind:'ks', exportId:ks.id,
       });
     }).join('') || `<div class="heatmap-empty">No Key Services recorded yet.</div>`;
     wireWsHeatmapTiles(grid);
@@ -1338,6 +1367,7 @@ function renderWsHeatmap(){
     grid.innerHTML = sorted.map(ws=>heatTileHTML({
       typeLabel:'Work System', name:ws.name, status:workSystemStatus(ws), trendItem:null,
       dataAttrs:`data-ws-drill="system" data-id="${ws.id}"`,
+      exportKind:'workSystem', exportId:ws.id,
     })).join('') || `<div class="heatmap-empty">No Work Systems recorded yet.</div>`;
     wireWsHeatmapTiles(grid);
     return;
@@ -1351,6 +1381,7 @@ function renderWsHeatmap(){
     grid.innerHTML = services.map(ks=>heatTileHTML({
       typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
       dataAttrs:`data-open-detail="ks" data-id="${ks.id}"`,
+      exportKind:'ks', exportId:ks.id,
     })).join('') || `<div class="heatmap-empty">No Key Services recorded under this Work System yet.</div>`;
     wireWsHeatmapTiles(grid);
     return;
@@ -1359,16 +1390,23 @@ function renderWsHeatmap(){
 
 function wireWsHeatmapTiles(scope){
   scope.querySelectorAll('[data-ws-drill]').forEach(tile=>{
-    tile.addEventListener('click', ()=>{
+    const activate = ()=>{
       wsHeatmapView = { level:'system', workSystemId: tile.dataset.id };
       renderWsHeatmap();
+    };
+    tile.addEventListener('click', activate);
+    tile.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
   scope.querySelectorAll('[data-open-detail]').forEach(tile=>{
-    tile.addEventListener('click', ()=>{
-      openDetailModal(tile.dataset.openDetail, tile.dataset.id);
+    const activate = ()=> openDetailModal(tile.dataset.openDetail, tile.dataset.id);
+    tile.addEventListener('click', activate);
+    tile.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
+  wireTileExportButtons(scope);
 }
 
 /* ---------- Objective hover tooltip on Program align-tags ----------
@@ -1563,6 +1601,69 @@ function renderExportScopeSelect(){
   const options = ['<option value="all">All Goals</option>']
     .concat(DATA.goals.map(g=>`<option value="${g.id}">${g.name}</option>`));
   select.innerHTML = options.join('');
+}
+
+/* ---------- Export: single datapoint ----------
+   The small, subtle "⬇" on every tile — exports just that one item as
+   a one-row CSV, matching the same column layout as the full export
+   so the two are easy to combine or compare. */
+function buildSingleItemRow(kind, id){
+  const trendLabel = item => { const t = computeTrend(item.history); return t ? TREND_META[t].label : ''; };
+
+  if(kind === 'workSystem'){
+    const ws = DATA.workSystems.find(w=>w.id===id);
+    if(!ws) return null;
+    return ['Work System', ws.name, workSystemStatus(ws), '', '', '', '', ''];
+  }
+  if(kind === 'ks'){
+    const ks = DATA.keyServices.find(k=>k.id===id);
+    if(!ks) return null;
+    const goalNames = (ks.goals||[]).map(gid=>DATA.goals.find(g=>g.id===gid)).filter(Boolean).map(g=>g.name).join('; ');
+    const ws = DATA.workSystems.find(w=>w.id===ks.workSystem);
+    return ['Key Service', ks.name, keyServiceStatus(ks), trendLabel(ks), goalNames, '', ws ? ws.name : '', ks.statusUpdated || ''];
+  }
+  if(kind === 'goal'){
+    const g = DATA.goals.find(gg=>gg.id===id);
+    if(!g) return null;
+    return ['Goal', g.name, goalProgramViewStatus(g), '', '', '', '', ''];
+  }
+  if(kind === 'objective'){
+    const o = DATA.objectives.find(oo=>oo.id===id);
+    if(!o) return null;
+    const g = DATA.goals.find(gg=>gg.id===o.goal);
+    return ['Objective', o.name, objectiveStatus(o), '', g ? g.name : '', '', '', ''];
+  }
+  if(kind === 'program'){
+    const p = DATA.programs.find(pp=>pp.id===id);
+    if(!p) return null;
+    const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
+    return ['Program', p.name, programStatus(p), trendLabel(p), '', obNames, '', ''];
+  }
+  return null;
+}
+
+function exportSingleItemCSV(kind, id){
+  const row = buildSingleItemRow(kind, id);
+  if(!row) return;
+  const header = ['Type','Name','Status','Trend','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated'];
+  const csv = [header, row].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  downloadBlob(csv, `durango-${slugify(row[1])}-${todayStamp()}.csv`, 'text/csv;charset=utf-8;');
+}
+
+// Wires every tile's small "⬇" export icon. Stops the click from also
+// triggering the tile's own drill/open-detail behavior underneath it.
+function wireTileExportButtons(scope){
+  scope.querySelectorAll('.tile-export-btn[data-export-kind]').forEach(btn=>{
+    const handler = (e)=>{
+      e.stopPropagation();
+      e.preventDefault();
+      exportSingleItemCSV(btn.dataset.exportKind, btn.dataset.exportId);
+    };
+    btn.addEventListener('click', handler);
+    btn.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); handler(e); }
+    });
+  });
 }
 
 function exportCSV(){
