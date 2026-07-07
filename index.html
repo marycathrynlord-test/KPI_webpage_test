@@ -262,6 +262,17 @@
   .heat-tile .heat-name{font-size:12.5px; font-weight:700; line-height:1.3;}
   .heat-tile .heat-foot{display:flex; align-items:center; justify-content:space-between; margin-top:8px; font-size:10.5px; font-weight:600; opacity:.9;}
   .heat-tile .heat-trend{font-size:13px;}
+  .heat-tile .heat-subtitle{font-size:9.5px; opacity:.85; margin:-2px 0 6px;}
+
+  /* ---------- View mode toggle (grouped vs. flat all-at-once) ---------- */
+  .view-toggle{display:flex; flex-wrap:wrap; gap:6px;}
+  .view-toggle-btn{
+    font-size:12px; font-weight:700; padding:6px 14px; border-radius:100px; cursor:pointer;
+    border:1.5px solid var(--line); background:var(--white); color:var(--slate); font-family:inherit;
+    transition:all .15s ease;
+  }
+  .view-toggle-btn.active{ background:var(--forest); border-color:var(--forest); color:#fff; }
+  .view-toggle-btn:hover:not(.active){ border-color:var(--sage); }
 
   .heat-tile.status-on-track{ background:#1B8A79; }
   .heat-tile.status-at-risk{ background:#D9A441; color:#3a2c05; }
@@ -513,8 +524,9 @@
     </div>
 
     <div class="drill-col">
-      <div class="drill-col-head">
+      <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
         <div class="heatmap-breadcrumb" id="heatmap-breadcrumb"></div>
+        <div class="view-toggle" id="goal-view-toggle"></div>
       </div>
       <div class="heatmap-body">
         <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -531,8 +543,9 @@
     </div>
 
     <div class="drill-col">
-      <div class="drill-col-head">
+      <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
         <div class="heatmap-breadcrumb" id="ws-heatmap-breadcrumb"></div>
+        <div class="view-toggle" id="ws-view-toggle"></div>
       </div>
       <div class="heatmap-body">
         <div class="heatmap-grid" id="ws-heatmap-grid"></div>
@@ -1098,13 +1111,14 @@ function renderHeatmapBreadcrumb(){
   });
 }
 
-function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='' }){
+function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='' }){
   const trend = trendItem ? computeTrend(trendItem.history) : null;
   const trendHTML = trend ? `<span class="heat-trend" style="color:${trend==='improving'?'#fff':trend==='declining'?'#fff':'#fff'}">${TREND_META[trend].arrow}</span>` : '';
   return `
     <button class="heat-tile status-${status}" ${dataAttrs} tabindex="0">
       <div class="heat-type">${typeLabel}</div>
       <div class="heat-name">${name}</div>
+      ${subtitle ? `<div class="heat-subtitle">${subtitle}</div>` : ''}
       <div class="heat-foot"><span>${STATUS_META[status].label}</span>${trendHTML}${extraFoot}</div>
     </button>
   `;
@@ -1131,9 +1145,63 @@ function heatGoalTileHTML(g){
   `;
 }
 
+let goalViewMode = 'grouped'; // 'grouped' (by Goal), 'flatObjectives', or 'flatPrograms'
+
+function renderGoalViewToggle(){
+  const el = document.getElementById('goal-view-toggle');
+  if(!el) return;
+  el.innerHTML = `
+    <button class="view-toggle-btn${goalViewMode==='grouped'?' active':''}" data-goal-mode="grouped">By Goal</button>
+    <button class="view-toggle-btn${goalViewMode==='flatObjectives'?' active':''}" data-goal-mode="flatObjectives">All Objectives</button>
+    <button class="view-toggle-btn${goalViewMode==='flatPrograms'?' active':''}" data-goal-mode="flatPrograms">All Programs</button>
+  `;
+  el.querySelectorAll('[data-goal-mode]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      goalViewMode = btn.dataset.goalMode;
+      if(goalViewMode === 'grouped') heatmapView = { level:'goals' };
+      renderHeatmap();
+    });
+  });
+}
+
 function renderHeatmap(){
-  renderHeatmapBreadcrumb();
+  renderGoalViewToggle();
   const grid = document.getElementById('heatmap-grid');
+
+  // Flat mode: every Objective, worst-first, tagged with its Goal —
+  // zero-click visibility into every Objective at once.
+  if(goalViewMode === 'flatObjectives'){
+    document.getElementById('heatmap-breadcrumb').innerHTML = '';
+    const sorted = [...DATA.objectives].sort((a,b)=>goalSortWeight(objectiveStatus(a)) - goalSortWeight(objectiveStatus(b)));
+    grid.innerHTML = sorted.map(o=>{
+      const g = DATA.goals.find(gg=>gg.id===o.goal);
+      return heatTileHTML({
+        typeLabel:'Objective', name:o.name, status:objectiveStatus(o), trendItem:null,
+        subtitle: g ? g.name : '',
+        dataAttrs:`data-drill="objective" data-goal-id="${o.goal}" data-id="${o.id}"`,
+      });
+    }).join('') || `<div class="heatmap-empty">No Objectives recorded yet.</div>`;
+    wireHeatmapTiles(grid);
+    return;
+  }
+
+  // Flat mode: every Program, worst-first, tagged with its Objective(s).
+  if(goalViewMode === 'flatPrograms'){
+    document.getElementById('heatmap-breadcrumb').innerHTML = '';
+    const sorted = [...DATA.programs].sort((a,b)=>goalSortWeight(programStatus(a)) - goalSortWeight(programStatus(b)));
+    grid.innerHTML = sorted.map(p=>{
+      const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join(', ');
+      return heatTileHTML({
+        typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
+        subtitle: obNames,
+        dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
+      });
+    }).join('') || `<div class="heatmap-empty">No Programs recorded yet.</div>`;
+    wireHeatmapTiles(grid);
+    return;
+  }
+
+  renderHeatmapBreadcrumb();
 
   if(heatmapView.level === 'goals'){
     const sorted = [...DATA.goals].sort((a,b)=>goalSortWeight(goalProgramViewStatus(a)) - goalSortWeight(goalProgramViewStatus(b)));
@@ -1178,6 +1246,11 @@ function wireHeatmapTiles(scope){
   scope.querySelectorAll('[data-drill]').forEach(tile=>{
     tile.addEventListener('click', ()=>{
       const kind = tile.dataset.drill;
+      // Drilling always returns to the structured, grouped path — even
+      // if the click originated from a flat view (e.g. clicking an
+      // Objective tile in "All Objectives" should land on its Programs
+      // shown the normal grouped way, not stay in flat mode).
+      goalViewMode = 'grouped';
       if(kind === 'goal') heatmapView = { level:'goal', goalId: tile.dataset.id };
       else if(kind === 'objective') heatmapView = { level:'objective', goalId: tile.dataset.goalId, objectiveId: tile.dataset.id };
       renderHeatmap();
@@ -1199,6 +1272,23 @@ function wireHeatmapTiles(scope){
    (a real rollup source) get their own tile level but Key Services don't
    need one for their related Programs. */
 let wsHeatmapView = { level: 'systems' };
+let wsViewMode = 'grouped'; // 'grouped' (by Work System) or 'flat' (all Key Services at once)
+
+function renderWsViewToggle(){
+  const el = document.getElementById('ws-view-toggle');
+  if(!el) return;
+  el.innerHTML = `
+    <button class="view-toggle-btn${wsViewMode==='grouped'?' active':''}" data-ws-mode="grouped">By Work System</button>
+    <button class="view-toggle-btn${wsViewMode==='flat'?' active':''}" data-ws-mode="flat">All Key Services</button>
+  `;
+  el.querySelectorAll('[data-ws-mode]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      wsViewMode = btn.dataset.wsMode;
+      if(wsViewMode === 'grouped') wsHeatmapView = { level:'systems' };
+      renderWsHeatmap();
+    });
+  });
+}
 
 function renderWsHeatmapBreadcrumb(){
   const bc = document.getElementById('ws-heatmap-breadcrumb');
@@ -1220,8 +1310,28 @@ function renderWsHeatmapBreadcrumb(){
 }
 
 function renderWsHeatmap(){
-  renderWsHeatmapBreadcrumb();
+  renderWsViewToggle();
   const grid = document.getElementById('ws-heatmap-grid');
+
+  // Flat mode: every Key Service, worst-first, tagged with its Work
+  // System — a genuine zero-click "see everything" view, no need to
+  // pick a Work System first. Tiles still go straight to full detail.
+  if(wsViewMode === 'flat'){
+    document.getElementById('ws-heatmap-breadcrumb').innerHTML = '';
+    const sorted = [...DATA.keyServices].sort((a,b)=>goalSortWeight(keyServiceStatus(a)) - goalSortWeight(keyServiceStatus(b)));
+    grid.innerHTML = sorted.map(ks=>{
+      const ws = DATA.workSystems.find(w=>w.id===ks.workSystem);
+      return heatTileHTML({
+        typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
+        subtitle: ws ? ws.name : '',
+        dataAttrs:`data-open-detail="ks" data-id="${ks.id}"`,
+      });
+    }).join('') || `<div class="heatmap-empty">No Key Services recorded yet.</div>`;
+    wireWsHeatmapTiles(grid);
+    return;
+  }
+
+  renderWsHeatmapBreadcrumb();
 
   if(wsHeatmapView.level === 'systems'){
     const sorted = [...DATA.workSystems].sort((a,b)=>goalSortWeight(workSystemStatus(a)) - goalSortWeight(workSystemStatus(b)));
