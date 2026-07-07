@@ -408,6 +408,16 @@
   <!-- HEADLINE SYNTHESIS -->
   <div class="headline-banner" id="headline-banner"></div>
 
+  <!-- GOAL COMPARISON STRIP (restored — renderGoalSummary() targets this id) -->
+  <div class="section">
+    <div class="section-head">
+      <div class="eyebrow">Strategic Plan</div>
+      <h2>Goals at a glance, worst first</h2>
+      <p>Each bar shows the mix of On Track / At Risk / Off Track Objectives behind that Goal. Click a card to jump to its full detail below.</p>
+    </div>
+    <div class="goal-summary-grid" id="goal-summary"></div>
+  </div>
+
    <!-- The City of Durango at a glance -->
   <div class="section">
     <div class="section-head">
@@ -419,24 +429,34 @@
   </div>
 
   <!-- System Definitions  -->
+  <div class="section">
+    <div class="section-head">
+      <div class="eyebrow">Reference</div>
+      <h2>System Definitions</h2>
+    </div>
+    <div class="status-defs" style="margin:0;">
+      <div class="def-row"><dt>Strategic Plan —</dt> <dd>High-level community outcomes and priorities.</dd></div>
+      <div class="def-row"><dt>Key Work System —</dt> <dd>Major operational systems that create City value.</dd></div>
+      <div class="def-row"><dt>Key Services —</dt> <dd>Core services delivered to residents and stakeholders.</dd></div>
+      <div class="def-row"><dt>Programs —</dt> <dd>Operational activities and service delivery functions.</dd></div>
+    </div>
+  </div>
 
-       <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
-      <div class="status-defs" style="margin:0 20px 20px;">
-        <div class="def-row"><dt>Strategic Plan —</dt> <dd>High-level community outcomes and priorities.​</dd></div>
-        <div class="def-row"><dt>Key Work System —</dt> <dd></dd>Major operational systems that create City value.​</dd></div>
-        <div class="def-row"><dt>Key Services —</dt> <dd>Core services delivered to residents and stakeholders.​</dd></div>
-        <div class="def-row"><dt>Programs —</dt> <dd>Operational activities and service delivery functions.​</dd></div>
-      </div>
- <!-- Progress key  -->
-
-       <div class="status-legend" id="status-legend" style="padding:0 20px 16px;"></div>
-      <div class="status-defs" style="margin:0 20px 20px;">
-        <div class="def-row"><dt>On Track —</dt> <dd>performance is at or above target, or within an agreed tolerance (e.g. within 5%).</dd></div>
-        <div class="def-row"><dt>At Risk —</dt> <dd>performance is below target but recoverable — within a moderate gap (e.g. 5–15% off target) or trending toward target.</dd></div>
-        <div class="def-row"><dt>Off Track —</dt> <dd>performance is significantly below target (e.g. more than 15% off) or has declined for two or more consecutive reporting periods.</dd></div>
-        <div class="def-row"><dt>No Data —</dt> <dd>no current measure has been recorded for this item.</dd></div>
-        <div class="def-row" style="margin-top:8px;"><dt>⏱ Stale —</dt> <dd>this item's status hasn't been updated in over 45 days; treat the badge as unverified until refreshed.</dd></div>
-      </div>
+  <!-- Progress key  -->
+  <div class="section">
+    <div class="section-head">
+      <div class="eyebrow">Reference</div>
+      <h2>Progress Key</h2>
+    </div>
+    <div class="status-legend" id="status-legend" style="padding:0 0 16px;"></div>
+    <div class="status-defs" style="margin:0;">
+      <div class="def-row"><dt>On Track —</dt> <dd>performance is at or above target, or within an agreed tolerance (e.g. within 5%).</dd></div>
+      <div class="def-row"><dt>At Risk —</dt> <dd>performance is below target but recoverable — within a moderate gap (e.g. 5–15% off target) or trending toward target.</dd></div>
+      <div class="def-row"><dt>Off Track —</dt> <dd>performance is significantly below target (e.g. more than 15% off) or has declined for two or more consecutive reporting periods.</dd></div>
+      <div class="def-row"><dt>No Data —</dt> <dd>no current measure has been recorded for this item.</dd></div>
+      <div class="def-row" style="margin-top:8px;"><dt>⏱ Stale —</dt> <dd>this item's status hasn't been updated in over 45 days; treat the badge as unverified until refreshed.</dd></div>
+    </div>
+  </div>
 
   <!-- Strategic Plan — Community View  -->
   <div class="section" id="goal-drill">
@@ -859,16 +879,6 @@ function renderStats(){
   wireStatusTooltips(document.getElementById('stat-grid'));
 }
 
-/* ---------- Work System → Key Service → Program tree ---------- */
-/* ---------- Strategic Plan tree (primary view) ----------
-   Rooted at Strategic Plan Goals, not Work Systems. Each Goal expands
-   into two groups, matching the two solid-arrow rollups from the
-   framework: Key Services that roll up to it directly, and Objectives
-   that roll up from their Programs. Both groups are themselves
-   expandable one level further — Key Services reveal their related
-   Programs (alignment only), Objectives reveal their real Programs
-   (the actual rollup). A Key Service or Program aligned to more than
-   one Goal/Objective will legitimately appear more than once. */
 /* ---------- Headline synthesis ----------
    One computed sentence, generated from the data (not hand-typed),
    surfacing what actually needs attention before anyone clicks anything. */
@@ -1344,7 +1354,6 @@ function wireModalChrome(){
   });
 }
 
-/* ---------- Init ---------- */
 /* ---------- Export: CSV ----------
    Pure data export, no external library needed — every Goal, Objective,
    Key Service, and Program, flattened into one table with its current
