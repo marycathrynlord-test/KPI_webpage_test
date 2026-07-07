@@ -259,6 +259,23 @@
     background: color-mix(in srgb, var(--goal-accent) 32%, white);
     color: var(--ink);
   }
+
+  /* ---------- Goal tiles shaped like their own mountain-logo segment ---------- */
+  .heatmap-grid.mountain-grid{ grid-template-columns:repeat(6, 1fr); gap:0; }
+  .heat-tile.goal-tile{
+    min-height:210px; justify-content:flex-end; padding-bottom:14px; border-radius:0;
+  }
+  .heat-tile.goal-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; }
+  /* Below this width, six zero-gap jagged slivers get unreadable — fall
+     back to the normal rectangular tile grid instead. */
+  @media (max-width:820px){
+    .heatmap-grid.mountain-grid{ grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+    .heat-tile.goal-tile{
+      clip-path:none !important; min-height:88px; justify-content:space-between;
+      padding-bottom:10px; border-radius:8px;
+    }
+    .heat-tile.goal-tile .tile-export-btn{ top:7px; bottom:auto; }
+  }
   .heat-tile .heat-type{
     font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
     opacity:.85; margin-bottom:6px;
@@ -1350,6 +1367,9 @@ function renderGoalViewToggle(){
 function renderHeatmap(){
   renderGoalViewToggle();
   const grid = document.getElementById('heatmap-grid');
+  // Reset here — only the Goals level applies the mountain-shape grid;
+  // every other level/mode must render as normal rectangular tiles.
+  grid.classList.remove('mountain-grid');
 
   // Flat mode: every Objective, worst-first, tagged with its Goal —
   // zero-click visibility into every Objective at once.
@@ -1390,13 +1410,30 @@ function renderHeatmap(){
 
   if(heatmapView.level === 'goals'){
     const sorted = sortGoalsCanonical(DATA.goals);
-    grid.innerHTML = sorted.map(g=>heatTileHTML({
-      typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
-      dataAttrs:`data-drill="goal" data-id="${g.id}"`,
-      exportKind:'goal', exportId:g.id,
-      tileStyle:`border-top:4px solid ${g.color}; --goal-accent:${g.color};`,
-      extraClass:'goal-tile',
-    })).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
+    grid.classList.add('mountain-grid');
+
+    // A fixed left-to-right peak/valley pattern, one value per tile
+    // boundary — matching the general silhouette of the real logo
+    // (tallest peak roughly at RICC, 4th position). All values stay
+    // under 55% so the bottom ~45% of every tile is always a clear,
+    // fully-rectangular band reserved for text, regardless of how
+    // tall or short that tile's own peak is.
+    const boundaries = [45, 38, 35, 15, 22, 40, 55];
+    const peaks = [25, 28, 10, 2, 30, 45];
+
+    grid.innerHTML = sorted.map((g,i)=>{
+      const left = boundaries[i] ?? 40;
+      const peak = peaks[i] ?? 30;
+      const right = boundaries[i+1] ?? 40;
+      const clip = `polygon(0% 100%, 0% ${left}%, 50% ${peak}%, 100% ${right}%, 100% 100%)`;
+      return heatTileHTML({
+        typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
+        dataAttrs:`data-drill="goal" data-id="${g.id}"`,
+        exportKind:'goal', exportId:g.id,
+        tileStyle:`clip-path:${clip}; --goal-accent:${g.color};`,
+        extraClass:'goal-tile',
+      });
+    }).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
     wireHeatmapTiles(grid);
     return;
   }
