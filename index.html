@@ -276,6 +276,51 @@
 
   .heatmap-empty{grid-column:1/-1; font-size:13px; color:var(--slate); font-style:italic; padding:20px 0;}
 
+  /* ---------- Quick filters ("what matters to you") ---------- */
+  .quick-filter-bar{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+  .quick-filter-btn{
+    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
+    border:1.5px solid var(--line); background:var(--white); color:var(--ink);
+    padding:9px 16px; border-radius:100px; cursor:pointer; font-family:inherit;
+    transition:all .15s ease;
+  }
+  .quick-filter-btn:hover, .quick-filter-btn:focus-visible{
+    border-color:var(--sage); background:var(--mist); outline:none;
+  }
+  .qf-icon{font-size:16px;}
+
+  /* ---------- Guided tour ---------- */
+  .tour-restart-btn{
+    display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.28); color:var(--white);
+    padding:7px 14px; border-radius:100px; cursor:pointer; font-family:inherit;
+  }
+  .tour-restart-btn:hover{ background:rgba(255,255,255,.2); }
+
+  .tour-highlight{
+    outline:3px solid var(--sage); outline-offset:4px; border-radius:10px;
+    animation:tourPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes tourPulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(127,180,169,0.45); }
+    50%{ box-shadow:0 0 0 9px rgba(127,180,169,0); }
+  }
+
+  .tour-card{
+    display:none; position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    width:min(420px, calc(100vw - 32px)); background:var(--white); border:1px solid var(--line);
+    border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.25); padding:20px 22px; z-index:1200;
+  }
+  .tour-card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .tour-progress{font-size:11px; font-weight:700; color:var(--slate); letter-spacing:.06em; text-transform:uppercase;}
+  .tour-skip-link{font-size:12px; color:var(--slate); background:none; border:none; cursor:pointer; text-decoration:underline; font-family:inherit;}
+  .tour-title{font-size:15px; font-weight:700; color:var(--forest-dark); margin:0 0 8px;}
+  .tour-body{font-size:13px; color:var(--ink); line-height:1.55; margin:0 0 18px;}
+  .tour-actions{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .tour-btn{font-size:12.5px; font-weight:700; padding:7px 16px; border-radius:100px; cursor:pointer; border:1.5px solid var(--line); background:var(--white); color:var(--forest-dark); font-family:inherit;}
+  .tour-btn.primary{ background:var(--forest); border-color:var(--forest); color:#fff; }
+  .tour-btn:disabled{ opacity:.4; cursor:default; }
+
   /* ---------- Export toolbar ---------- */
   .export-bar{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
   .export-btn{
@@ -376,6 +421,7 @@
     </div>
   </div>
   <div class="header-right">
+    <button class="tour-restart-btn" id="tour-restart-btn" title="Restart the guided tour">❓ Take the tour</button>
     <span class="datepill" id="today-pill">Loading date…</span>
     <span class="livepill"><span class="dot"></span>Sample Data</span>
   </div>
@@ -408,14 +454,14 @@
   <!-- HEADLINE SYNTHESIS -->
   <div class="headline-banner" id="headline-banner"></div>
 
-  <!-- GOAL COMPARISON STRIP (restored — renderGoalSummary() targets this id) -->
-  <div class="section">
+  <!-- QUICK FILTERS: "what matters to you" jumps straight to a Work System -->
+  <div class="section" style="margin-top:28px;">
     <div class="section-head">
-      <div class="eyebrow">Strategic Plan</div>
-      <h2>Goals at a glance, worst first</h2>
-      <p>Each bar shows the mix of On Track / At Risk / Off Track Objectives behind that Goal. Click a card to jump to its full detail below.</p>
+      <div class="eyebrow">Quick Links</div>
+      <h2>What matters to you?</h2>
+      <p>Jump straight to the part of the City that affects you most.</p>
     </div>
-    <div class="goal-summary-grid" id="goal-summary"></div>
+    <div class="quick-filter-bar" id="quick-filter-bar"></div>
   </div>
 
    <!-- The City of Durango at a glance -->
@@ -495,6 +541,21 @@
   </div>
   <!-- Hover tooltip for status breakdown in at-a-glance cards -->
   <div class="hover-tooltip" id="hover-tooltip" role="tooltip"></div>
+
+  <!-- GUIDED TOUR CARD -->
+  <div class="tour-card" id="tour-card">
+    <div class="tour-card-head">
+      <span class="tour-progress" id="tour-progress">1 / 6</span>
+      <button class="tour-skip-link" id="tour-skip">Skip tour</button>
+    </div>
+    <h4 class="tour-title" id="tour-title"></h4>
+    <p class="tour-body" id="tour-body"></p>
+    <div class="tour-actions">
+      <button class="tour-btn" id="tour-prev">Back</button>
+      <button class="tour-btn primary" id="tour-next">Next</button>
+    </div>
+  </div>
+
 
   <!-- DETAIL MODAL (shared by every Key Service / Program "Details" button) -->
   <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
@@ -1536,21 +1597,10 @@ async function exportPDF(){
       pdf.text(`Generated ${new Date().toLocaleString('en-US')}`, margin, margin + 16);
     }
 
-    // Page 1: the Goal comparison chart (bars), same as before.
-    const chartTarget = scope === 'all'
-      ? document.getElementById('goal-summary')
-      : document.querySelector(`[data-goal-jump="${scope}"]`);
-    const chartTitle = scope === 'all'
-      ? 'City of Durango — Strategic Plan Goals Snapshot'
-      : `City of Durango — ${DATA.goals.find(g=>g.id===scope).name} Snapshot`;
-
-    addTitledPage(chartTitle);
-    const chartCanvas = await html2canvas(chartTarget, { scale:2, backgroundColor:'#FBFCFB' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    pdf.addImage(chartCanvas.toDataURL('image/png'), 'PNG', margin, margin + 30,
-      pageWidth - margin*2, chartCanvas.height * (pageWidth - margin*2) / chartCanvas.width);
-
     // Drill-down pages: walk the heatmap through every level it has.
+    // (The old "Goal comparison chart" first page was removed along with
+    // the Goals-at-a-glance section — the heatmap overview below is now
+    // genuinely page 1.)
     if(scope === 'all'){
       const overview = await captureHeatmapLevel({ level:'goals' }, 'All Goals — Heatmap Overview');
       addTitledPage(overview.title);
@@ -1594,6 +1644,122 @@ function wireExportButtons(){
   document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
 }
 
+/* ---------- Quick filters ("what matters to you") ----------
+   Friendly, resident-facing shortcuts straight into a Work System —
+   reuses the exact same jump-and-highlight pattern already used
+   elsewhere, just triggered by a plain-language button instead of a
+   Goal card. */
+const QUICK_FILTERS = [
+  { icon:'🏛️', label:'Leadership & Government', workSystemId:'ws1' },
+  { icon:'💰', label:'City Finances', workSystemId:'ws2' },
+  { icon:'🏗️', label:'Community & Economy', workSystemId:'ws3' },
+  { icon:'🚓', label:'Public Safety', workSystemId:'ws4' },
+  { icon:'🚌', label:'Roads, Water & Transit', workSystemId:'ws5' },
+  { icon:'🌳', label:'Parks & Recreation', workSystemId:'ws6' },
+];
+
+function renderQuickFilters(){
+  const bar = document.getElementById('quick-filter-bar');
+  if(!bar) return;
+
+  bar.innerHTML = QUICK_FILTERS
+    .filter(f => DATA.workSystems.some(ws => ws.id === f.workSystemId))
+    .map(f => `
+      <button class="quick-filter-btn" data-ws-id="${f.workSystemId}">
+        <span class="qf-icon">${f.icon}</span>${f.label}
+      </button>
+    `).join('');
+
+  bar.querySelectorAll('[data-ws-id]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      wsHeatmapView = { level:'system', workSystemId: btn.dataset.wsId };
+      renderWsHeatmap();
+      const target = document.getElementById('worksystems');
+      if(!target) return;
+      target.scrollIntoView({ behavior:'smooth', block:'start' });
+      const panel = target.querySelector('.drill-col');
+      if(panel){
+        panel.style.transition = 'box-shadow .3s ease';
+        panel.style.boxShadow = '0 0 0 3px var(--sage)';
+        setTimeout(()=>{ panel.style.boxShadow = ''; }, 1400);
+      }
+    });
+  });
+}
+
+/* ---------- Guided first-visit tour ----------
+   A short, dismissible walkthrough of the page's structure. Shown
+   automatically once per browser (tracked via localStorage — this is a
+   real standalone site, not a Claude artifact, so browser storage is
+   the right tool here), and restartable anytime via the header button. */
+const TOUR_STEPS = [
+  { target: null, title: 'Welcome to the Performance Dashboard', body: 'A quick tour of how this page works. Skip anytime, or restart it later from the "❓ Take the tour" button up top.' },
+  { target: '#headline-banner', title: 'Start with the headline', body: 'One computed sentence tells you what needs attention right now, generated from the data below — not hand-typed.' },
+  { target: '#quick-filter-bar', title: 'Or jump straight to what matters to you', body: 'These shortcuts take you straight to the part of the City you care about most.' },
+  { target: '#stat-grid', title: 'At a glance', body: 'These cards break down everything the City tracks. Hover any status line to see exactly which items make it up.' },
+  { target: '#worksystems', title: 'Browse by department', body: 'Start with a Work System (like Public Safety or Parks), drill into its Key Services, then click any tile for full detail.' },
+  { target: '#goal-drill', title: 'See the policy side', body: 'Same work, viewed differently: Strategic Plan Goals → Objectives → the Programs that support them.' },
+  { target: '.export-bar', title: 'Take it with you', body: 'Export whatever you\'re looking at as a spreadsheet or PDF — the whole dashboard, or just one Goal.' },
+];
+
+let tourStep = 0;
+let tourHighlightedEl = null;
+
+function clearTourHighlight(){
+  if(tourHighlightedEl){ tourHighlightedEl.classList.remove('tour-highlight'); tourHighlightedEl = null; }
+}
+
+function showTourStep(){
+  const step = TOUR_STEPS[tourStep];
+  clearTourHighlight();
+
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-body').textContent = step.body;
+  document.getElementById('tour-progress').textContent = `${tourStep + 1} / ${TOUR_STEPS.length}`;
+  document.getElementById('tour-prev').disabled = tourStep === 0;
+  document.getElementById('tour-next').textContent = tourStep === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+
+  if(step.target){
+    const el = document.querySelector(step.target);
+    if(el){
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.classList.add('tour-highlight');
+      tourHighlightedEl = el;
+    }
+  }
+}
+
+function startTour(){
+  tourStep = 0;
+  document.getElementById('tour-card').style.display = 'block';
+  showTourStep();
+}
+
+function endTour(markSeen){
+  clearTourHighlight();
+  document.getElementById('tour-card').style.display = 'none';
+  if(markSeen){
+    try{ localStorage.setItem('durangoTourSeen', '1'); } catch(e){ /* storage unavailable — fine, tour just replays next visit */ }
+  }
+}
+
+function wireTour(){
+  document.getElementById('tour-next').addEventListener('click', ()=>{
+    if(tourStep === TOUR_STEPS.length - 1){ endTour(true); return; }
+    tourStep++;
+    showTourStep();
+  });
+  document.getElementById('tour-prev').addEventListener('click', ()=>{
+    if(tourStep > 0){ tourStep--; showTourStep(); }
+  });
+  document.getElementById('tour-skip').addEventListener('click', ()=> endTour(true));
+  document.getElementById('tour-restart-btn').addEventListener('click', startTour);
+
+  let alreadySeen = false;
+  try{ alreadySeen = localStorage.getItem('durangoTourSeen') === '1'; } catch(e){ /* storage unavailable — default to showing the tour */ }
+  if(!alreadySeen){ setTimeout(startTour, 700); }
+}
+
 function init(){
   document.getElementById('today-pill').textContent =
     new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
@@ -1603,13 +1769,14 @@ function init(){
 
   renderKPIs();
   renderHeadline();
-  renderGoalSummary();
+  renderQuickFilters();
   renderStats();
   renderStatusLegend();
   renderWsHeatmap();
   renderHeatmap();
   wireExportButtons();
   wireModalChrome();
+  wireTour();
 }
 
 loadData();
