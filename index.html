@@ -256,17 +256,28 @@
   }
   .heat-tile:hover, .heat-tile:focus-visible{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.18); outline:none; }
 
-  /* ---------- Goal tiles: muted brand color as base, status as a highlight on top ---------- */
+  /* ---------- Goal tiles: brand color as base (richer, gradiented for
+     depth), pure brand color as a hover "reveal", status as a highlight
+     chip on top. filter:drop-shadow (not box-shadow) follows the actual
+     clipped mountain silhouette rather than the tile's rectangular box. ---------- */
   .heatmap-grid.mountain-grid{ grid-template-columns:repeat(6, 1fr); gap:0; }
   .heat-tile.goal-tile{
     min-height:210px; justify-content:flex-end; padding-bottom:14px; border-radius:0;
-    color: var(--ink); /* base fill is now a light pastel, not a dark status color */
+    color: var(--ink);
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--goal-accent) 35%, white) 0%,
+      color-mix(in srgb, var(--goal-accent) 68%, white) 100%);
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.3));
+    transition: transform .12s ease, filter .15s ease;
   }
   .heat-tile.goal-tile:hover, .heat-tile.goal-tile:focus-visible, .heat-tile.goal-tile:active{
-    background: color-mix(in srgb, var(--goal-accent) 55%, white);
-    color: var(--ink);
+    background: var(--goal-accent);
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,.38));
+    color: #fff;
+    box-shadow: none; /* the generic rectangular hover shadow doesn't follow the clip-path shape */
   }
   .heat-tile.goal-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; background:rgba(0,0,0,.10); }
+  .heat-tile.goal-tile:hover .tile-export-btn{ background:rgba(255,255,255,.28); }
   .heat-tile.goal-tile .tile-export-btn:hover{ background:rgba(0,0,0,.18); }
   .heat-status-highlight{
     display:inline-flex; align-items:center; padding:3px 10px; border-radius:100px;
@@ -278,7 +289,7 @@
     .heatmap-grid.mountain-grid{ grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
     .heat-tile.goal-tile{
       clip-path:none !important; min-height:88px; justify-content:space-between;
-      padding-bottom:10px; border-radius:8px;
+      padding-bottom:10px; border-radius:8px; filter:none;
     }
     .heat-tile.goal-tile .tile-export-btn{ top:7px; bottom:auto; }
   }
@@ -300,6 +311,24 @@
   }
   .view-toggle-btn.active{ background:var(--forest); border-color:var(--forest); color:#fff; }
   .view-toggle-btn:hover:not(.active){ border-color:var(--sage); }
+
+  /* ---------- Root-mode toggle (Goal View vs Work System View) — the
+     primary switch for the unified explorer, so it reads with more
+     visual weight than the smaller secondary toggles elsewhere. ---------- */
+  .root-mode-toggle{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 16px;}
+  .root-mode-btn{
+    font-size:13.5px; font-weight:700; padding:10px 20px; border-radius:100px; cursor:pointer;
+    border:1.5px solid var(--line); background:var(--white); color:var(--slate); font-family:inherit;
+    transition:all .15s ease;
+  }
+  .root-mode-btn.active{ background:var(--forest); border-color:var(--forest); color:#fff; }
+  .root-mode-btn:hover:not(.active){ border-color:var(--sage); background:var(--mist); }
+
+  .view-details-link{
+    font-size:12.5px; font-weight:600; color:var(--teal); background:none; border:none;
+    cursor:pointer; font-family:inherit; padding:2px 0;
+  }
+  .view-details-link:hover{ text-decoration:underline; }
 
   .heat-tile.status-on-track{ background:#1B8A79; }
   .heat-tile.status-at-risk{ background:#D9A441; color:#3a2c05; }
@@ -637,19 +666,20 @@
   <!-- HEADLINE SYNTHESIS -->
   <div class="headline-banner" id="headline-banner" style="margin-top:28px;"></div>
 
-  <!-- Strategic Plan — Community View  -->
+  <!-- Unified explorer: toggle between Strategic Plan Goal View and Work System View -->
   <div class="section" id="goal-drill">
     <div class="section-head">
-      <div class="eyebrow">Strategic Plan — Community View</div>
-      <h2>Strategic Plan Goals → Objectives → Programs</h2>
-      <p>The policy side of the same work, viewed top-down: start at a Goal, see its Objectives, and see the Programs each Objective rolls up from. </p>
+      <div class="eyebrow">Explore the City's Work</div>
+      <h2 id="explorer-heading">Strategic Plan Goals → Key Services → Programs</h2>
+      <p id="explorer-subhead">Start at a Goal, drill into its Key Services, then into the Programs each one runs.</p>
     </div>
 
+    <div class="root-mode-toggle" id="root-mode-toggle"></div>
 
     <div class="drill-col">
       <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
         <div class="heatmap-breadcrumb" id="heatmap-breadcrumb"></div>
-        <div class="view-toggle" id="goal-view-toggle"></div>
+        <button class="view-details-link" id="explorer-ks-details-btn" style="display:none;">View Key Service details →</button>
       </div>
       <div class="heatmap-body">
         <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -657,24 +687,6 @@
     </div>
   </div>
 
-  <!-- Operational Structure — Org View -->
-  <div class="section" id="worksystems">
-    <div class="section-head">
-      <div class="eyebrow">Operational Structure — Organization View</div>
-      <h2>Work Systems → Key Services</h2>
-      <p>Start with your own Work System and drill into its Key Services. Click a Key Service to see its full detail, including any Programs related to it.</p>
-    </div>
-
-    <div class="drill-col">
-      <div class="drill-col-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div class="heatmap-breadcrumb" id="ws-heatmap-breadcrumb"></div>
-        <div class="view-toggle" id="ws-view-toggle"></div>
-      </div>
-      <div class="heatmap-body">
-        <div class="heatmap-grid" id="ws-heatmap-grid"></div>
-      </div>
-    </div>
-  </div>
   <!-- Hover tooltip for status breakdown in at-a-glance cards -->
   <div class="hover-tooltip" id="hover-tooltip" role="tooltip"></div>
 
@@ -1219,42 +1231,6 @@ function goalObjectiveCompositionBar(g){
   return `<div class="bar-track-wide">${segs}</div>`;
 }
 
-function renderGoalSummary(){
-  const sorted = sortGoalsCanonical(DATA.goals);
-  const grid = document.getElementById('goal-summary');
-
-  grid.innerHTML = sorted.map(g=>{
-    const progStatus = goalProgramViewStatus(g);
-    const obCount = DATA.objectives.filter(o=>o.goal===g.id).length;
-    return `
-      <button class="goal-card" data-goal-jump="${g.id}" style="border-top-color:${g.color}">
-        <div class="goal-card-top">
-          <span class="goal-card-name">${g.name}</span>
-          ${statusBadgeHTML(progStatus)}
-        </div>
-        ${goalObjectiveCompositionBar(g)}
-        <div class="goal-card-meta" style="margin-top:10px;">${obCount} objective${obCount!==1?'s':''}</div>
-      </button>
-    `;
-  }).join('');
-
-  grid.querySelectorAll('[data-goal-jump]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      heatmapView = { level:'goal', goalId: btn.dataset.goalJump };
-      renderHeatmap();
-      const target = document.getElementById('worksystems');
-      if(!target) return;
-      target.scrollIntoView({ behavior:'smooth', block:'start' });
-      const panel = document.querySelector('.drill-col');
-      if(panel){
-        panel.style.transition = 'box-shadow .3s ease';
-        panel.style.boxShadow = '0 0 0 3px var(--sage)';
-        setTimeout(()=>{ panel.style.boxShadow = ''; }, 1400);
-      }
-    });
-  });
-}
-
 function primaryMetricHTML(item){
   const metrics = (item.details && item.details.metrics) || [];
   const m = metrics.find(m=>m.target) || metrics[0];
@@ -1276,40 +1252,9 @@ function staleFlagHTML(item){
   return `<span class="stale-flag" title="Status last updated ${item.statusUpdated}">⏱ ${days}d stale</span>`;
 }
 
-/* ---------- Heatmap drill-down navigator ----------
-   Replaces the old always-expanded accordion tree. Only one level is
-   ever on screen: a grid of colored tiles you scan for red/gold first,
-   then click to go one level deeper. Breadcrumbs let you jump back up.
-   State lives in `heatmapView`; render/click handlers below just read
-   and update it. */
-let heatmapView = { level: 'goals' };
 
-function renderHeatmapBreadcrumb(){
-  const bc = document.getElementById('heatmap-breadcrumb');
-  const parts = [`<button class="crumb${heatmapView.level==='goals'?' current':''}" data-crumb="goals">All Goals</button>`];
-
-  if(heatmapView.level === 'goal' || heatmapView.level === 'objective'){
-    const g = DATA.goals.find(gg=>gg.id===heatmapView.goalId);
-    parts.push(`<span class="sep">›</span>`);
-    parts.push(`<button class="crumb${heatmapView.level==='goal'?' current':''}" data-crumb="goal" data-goal-id="${heatmapView.goalId}">${g ? g.name : 'Goal'}</button>`);
-  }
-  if(heatmapView.level === 'objective'){
-    const o = DATA.objectives.find(oo=>oo.id===heatmapView.objectiveId);
-    parts.push(`<span class="sep">›</span>`);
-    parts.push(`<button class="crumb current" data-crumb="objective">${o ? o.name : 'Objective'}</button>`);
-  }
-  bc.innerHTML = parts.join('');
-
-  bc.querySelectorAll('.crumb').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const level = btn.dataset.crumb;
-      if(level === 'goals') heatmapView = { level:'goals' };
-      else if(level === 'goal') heatmapView = { level:'goal', goalId: btn.dataset.goalId };
-      renderHeatmap();
-    });
-  });
-}
-
+// Generic tile renderer shared by every level of the explorer (Goal,
+// Work System, Key Service, Program tiles all use this).
 function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAttrs='', subtitle='', exportKind='', exportId='', tileStyle='', extraClass='', statusAsHighlight=false }){
   const trend = trendItem ? computeTrend(trendItem.history) : null;
   const trendHTML = trend ? `<span class="heat-trend" style="color:${trend==='improving'?'#fff':trend==='declining'?'#fff':'#fff'}">${TREND_META[trend].arrow}</span>` : '';
@@ -1336,282 +1281,179 @@ function heatTileHTML({ typeLabel, name, status, trendItem, extraFoot='', dataAt
   `;
 }
 
-// Goal tiles get a special two-tone treatment since a Goal genuinely has
-// two separate statuses (Key Service view, Program view) — see the
-// Baldrige fix earlier. Splitting the tile's background keeps both
-// visible at a glance instead of picking one and hiding the other.
-function heatGoalTileHTML(g){
-  const ksStatus = goalKeyServiceViewStatus(g);
-  const progStatus = goalProgramViewStatus(g);
-  return `
-    <button class="heat-tile split" data-drill="goal" data-id="${g.id}" tabindex="0"
-      title="Key Services: ${STATUS_META[ksStatus].label} | Programs: ${STATUS_META[progStatus].label}">
-      <div class="heat-split-bg">
-        <div class="half left status-${ksStatus}" style="background:${statusDotColor(ksStatus)}"></div>
-        <div class="half right status-${progStatus}" style="background:${statusDotColor(progStatus)}"></div>
-      </div>
-      <div class="heat-type">Goal</div>
-      <div class="heat-name">${g.name}</div>
-      <div class="heat-foot"><span>KS: ${STATUS_META[ksStatus].label}</span><span>Prog: ${STATUS_META[progStatus].label}</span></div>
-    </button>
-  `;
+/* ---------- Unified explorer: Goal View <-> Work System View ----------
+   One shared drill-down: pick a root type (Strategic Plan Goal or Work
+   System), then Key Services under that root, then Programs under a
+   Key Service (via each Program's own `keyservice` tag — previously
+   only surfaced inside the Detail modal as a "related, alignment-only"
+   list; now promoted to a real navigable level per the new structure:
+   Goal -> Key Service -> Program, and Work System -> Key Service ->
+   Program share the same last two steps). */
+let dashboardView = { rootMode: 'goal', level: 'roots' };
+
+function rootsList(rootMode){
+  return rootMode === 'goal' ? sortGoalsCanonical(DATA.goals) : DATA.workSystems;
+}
+function rootName(rootMode, rootId){
+  const root = rootsList(rootMode).find(r=>r.id===rootId);
+  return root ? root.name : (rootMode === 'goal' ? 'Goal' : 'Work System');
+}
+function keyServicesUnderRoot(rootMode, rootId){
+  return rootMode === 'goal'
+    ? DATA.keyServices.filter(k=>Array.isArray(k.goals) && k.goals.includes(rootId))
+    : DATA.keyServices.filter(k=>k.workSystem===rootId);
+}
+function programsUnderKeyService(ksId){
+  return DATA.programs.filter(p=>p.keyservice===ksId);
 }
 
-let goalViewMode = 'grouped'; // 'grouped' (by Goal), 'flatObjectives', or 'flatPrograms'
-
-function renderGoalViewToggle(){
-  const el = document.getElementById('goal-view-toggle');
+function renderRootModeToggle(){
+  const el = document.getElementById('root-mode-toggle');
   if(!el) return;
   el.innerHTML = `
-    <button class="view-toggle-btn${goalViewMode==='grouped'?' active':''}" data-goal-mode="grouped">By Goal</button>
-    <button class="view-toggle-btn${goalViewMode==='flatObjectives'?' active':''}" data-goal-mode="flatObjectives">All Objectives</button>
-    <button class="view-toggle-btn${goalViewMode==='flatPrograms'?' active':''}" data-goal-mode="flatPrograms">All Programs</button>
+    <button class="root-mode-btn${dashboardView.rootMode==='goal'?' active':''}" data-root-mode="goal">Strategic Plan Goal View</button>
+    <button class="root-mode-btn${dashboardView.rootMode==='workSystem'?' active':''}" data-root-mode="workSystem">Work System View</button>
   `;
-  el.querySelectorAll('[data-goal-mode]').forEach(btn=>{
+  el.querySelectorAll('[data-root-mode]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      goalViewMode = btn.dataset.goalMode;
-      if(goalViewMode === 'grouped') heatmapView = { level:'goals' };
-      renderHeatmap();
+      const mode = btn.dataset.rootMode;
+      if(mode === dashboardView.rootMode) return;
+      dashboardView = { rootMode: mode, level: 'roots' };
+      updateExplorerHeading();
+      renderDashboardHeatmap();
     });
   });
 }
 
-function renderHeatmap(){
-  renderGoalViewToggle();
+function updateExplorerHeading(){
+  const heading = document.getElementById('explorer-heading');
+  const sub = document.getElementById('explorer-subhead');
+  if(!heading || !sub) return;
+  if(dashboardView.rootMode === 'goal'){
+    heading.textContent = 'Strategic Plan Goals → Key Services → Programs';
+    sub.textContent = "Start at a Goal, drill into its Key Services, then into the Programs each one runs.";
+  } else {
+    heading.textContent = 'Work Systems → Key Services → Programs';
+    sub.textContent = "Start at a Work System, drill into its Key Services, then into the Programs each one runs.";
+  }
+}
+
+function renderDashboardBreadcrumb(){
+  const bc = document.getElementById('heatmap-breadcrumb');
+  const rootLabel = dashboardView.rootMode === 'goal' ? 'All Goals' : 'All Work Systems';
+  const parts = [`<button class="crumb${dashboardView.level==='roots'?' current':''}" data-crumb="roots">${rootLabel}</button>`];
+
+  if(dashboardView.level === 'root' || dashboardView.level === 'keyservice'){
+    parts.push(`<span class="sep">›</span>`);
+    parts.push(`<button class="crumb${dashboardView.level==='root'?' current':''}" data-crumb="root">${rootName(dashboardView.rootMode, dashboardView.rootId)}</button>`);
+  }
+  if(dashboardView.level === 'keyservice'){
+    const ks = DATA.keyServices.find(k=>k.id===dashboardView.ksId);
+    parts.push(`<span class="sep">›</span>`);
+    parts.push(`<button class="crumb current" data-crumb="keyservice">${ks ? ks.name : 'Key Service'}</button>`);
+  }
+  bc.innerHTML = parts.join('');
+
+  bc.querySelectorAll('.crumb').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const level = btn.dataset.crumb;
+      if(level === 'roots') dashboardView = { rootMode: dashboardView.rootMode, level:'roots' };
+      else if(level === 'root') dashboardView = { rootMode: dashboardView.rootMode, level:'root', rootId: dashboardView.rootId };
+      renderDashboardHeatmap();
+    });
+  });
+
+  const detailsBtn = document.getElementById('explorer-ks-details-btn');
+  if(detailsBtn){
+    if(dashboardView.level === 'keyservice'){
+      detailsBtn.style.display = 'inline-block';
+      detailsBtn.onclick = () => openDetailModal('ks', dashboardView.ksId);
+    } else {
+      detailsBtn.style.display = 'none';
+    }
+  }
+}
+
+function renderDashboardHeatmap(){
+  renderRootModeToggle();
+  renderDashboardBreadcrumb();
   const grid = document.getElementById('heatmap-grid');
-  // Reset here — only the Goals level applies the mountain-shape grid;
-  // every other level/mode must render as normal rectangular tiles.
   grid.classList.remove('mountain-grid');
 
-  // Flat mode: every Objective, worst-first, tagged with its Goal —
-  // zero-click visibility into every Objective at once.
-  if(goalViewMode === 'flatObjectives'){
-    document.getElementById('heatmap-breadcrumb').innerHTML = '';
-    const sorted = [...DATA.objectives].sort((a,b)=>goalSortWeight(objectiveStatus(a)) - goalSortWeight(objectiveStatus(b)));
-    grid.innerHTML = sorted.map(o=>{
-      const g = DATA.goals.find(gg=>gg.id===o.goal);
-      return heatTileHTML({
-        typeLabel:'Objective', name:o.name, status:objectiveStatus(o), trendItem:null,
-        subtitle: g ? g.name : '',
-        dataAttrs:`data-drill="objective" data-goal-id="${o.goal}" data-id="${o.id}"`,
-        exportKind:'objective', exportId:o.id,
-      });
-    }).join('') || `<div class="heatmap-empty">No Objectives recorded yet.</div>`;
-    wireHeatmapTiles(grid);
+  if(dashboardView.level === 'roots'){
+    const roots = rootsList(dashboardView.rootMode);
+
+    if(dashboardView.rootMode === 'goal'){
+      grid.classList.add('mountain-grid');
+      // Same fixed peak/valley pattern used for the mountain-shaped
+      // Goal tiles — values stay under 55% so every tile keeps a clear
+      // text band at the bottom regardless of its own peak height.
+      const boundaries = [45, 38, 35, 15, 22, 40, 55];
+      const peaks = [25, 28, 10, 2, 30, 45];
+      grid.innerHTML = roots.map((g,i)=>{
+        const left = boundaries[i] ?? 40, peak = peaks[i] ?? 30, right = boundaries[i+1] ?? 40;
+        const clip = `polygon(0% 100%, 0% ${left}%, 50% ${peak}%, 100% ${right}%, 100% 100%)`;
+        return heatTileHTML({
+          typeLabel:'Goal', name:g.name, status:goalKeyServiceViewStatus(g), trendItem:null,
+          dataAttrs:`data-drill-root="${g.id}"`,
+          exportKind:'goal', exportId:g.id,
+          tileStyle:`clip-path:${clip}; --goal-accent:${g.color};`,
+          extraClass:'goal-tile',
+          statusAsHighlight:true,
+        });
+      }).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
+    } else {
+      const sorted = [...roots].sort((a,b)=>goalSortWeight(workSystemStatus(a)) - goalSortWeight(workSystemStatus(b)));
+      grid.innerHTML = sorted.map(ws=>heatTileHTML({
+        typeLabel:'Work System', name:ws.name, status:workSystemStatus(ws), trendItem:null,
+        dataAttrs:`data-drill-root="${ws.id}"`,
+        exportKind:'workSystem', exportId:ws.id,
+      })).join('') || `<div class="heatmap-empty">No Work Systems recorded yet.</div>`;
+    }
+    wireDashboardTiles(grid);
     return;
   }
 
-  // Flat mode: every Program, worst-first, tagged with its Objective(s).
-  if(goalViewMode === 'flatPrograms'){
-    document.getElementById('heatmap-breadcrumb').innerHTML = '';
-    const sorted = [...DATA.programs].sort((a,b)=>goalSortWeight(programStatus(a)) - goalSortWeight(programStatus(b)));
-    grid.innerHTML = sorted.map(p=>{
-      const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join(', ');
-      return heatTileHTML({
-        typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
-        subtitle: obNames,
-        dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
-        exportKind:'program', exportId:p.id,
-      });
-    }).join('') || `<div class="heatmap-empty">No Programs recorded yet.</div>`;
-    wireHeatmapTiles(grid);
+  if(dashboardView.level === 'root'){
+    const services = keyServicesUnderRoot(dashboardView.rootMode, dashboardView.rootId)
+      .sort((a,b)=>goalSortWeight(keyServiceStatus(a)) - goalSortWeight(keyServiceStatus(b)));
+    grid.innerHTML = services.map(ks=>heatTileHTML({
+      typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
+      dataAttrs:`data-drill-ks="${ks.id}"`,
+      exportKind:'ks', exportId:ks.id,
+    })).join('') || `<div class="heatmap-empty">No Key Services recorded here yet.</div>`;
+    wireDashboardTiles(grid);
     return;
   }
 
-  renderHeatmapBreadcrumb();
-
-  if(heatmapView.level === 'goals'){
-    const sorted = sortGoalsCanonical(DATA.goals);
-    grid.classList.add('mountain-grid');
-
-    // A fixed left-to-right peak/valley pattern, one value per tile
-    // boundary — matching the general silhouette of the real logo
-    // (tallest peak roughly at RICC, 4th position). All values stay
-    // under 55% so the bottom ~45% of every tile is always a clear,
-    // fully-rectangular band reserved for text, regardless of how
-    // tall or short that tile's own peak is.
-    const boundaries = [45, 38, 35, 15, 22, 40, 55];
-    const peaks = [25, 28, 10, 2, 30, 45];
-
-    grid.innerHTML = sorted.map((g,i)=>{
-      const left = boundaries[i] ?? 40;
-      const peak = peaks[i] ?? 30;
-      const right = boundaries[i+1] ?? 40;
-      const clip = `polygon(0% 100%, 0% ${left}%, 50% ${peak}%, 100% ${right}%, 100% 100%)`;
-      return heatTileHTML({
-        typeLabel:'Goal', name:g.name, status:goalProgramViewStatus(g), trendItem:null,
-        dataAttrs:`data-drill="goal" data-id="${g.id}"`,
-        exportKind:'goal', exportId:g.id,
-        tileStyle:`clip-path:${clip}; --goal-accent:${g.color}; background:color-mix(in srgb, ${g.color} 35%, white);`,
-        extraClass:'goal-tile',
-        statusAsHighlight:true,
-      });
-    }).join('') || `<div class="heatmap-empty">No Strategic Plan Goals recorded yet.</div>`;
-    wireHeatmapTiles(grid);
-    return;
-  }
-
-  if(heatmapView.level === 'goal'){
-    const g = DATA.goals.find(gg=>gg.id===heatmapView.goalId);
-    const objs = DATA.objectives
-      .filter(o=>o.goal===g.id)
-      .sort((a,b)=>goalSortWeight(objectiveStatus(a)) - goalSortWeight(objectiveStatus(b)));
-
-    grid.innerHTML = objs.map(o=>heatTileHTML({
-      typeLabel:'Objective', name:o.name, status:objectiveStatus(o), trendItem:null,
-      dataAttrs:`data-drill="objective" data-goal-id="${g.id}" data-id="${o.id}"`,
-      exportKind:'objective', exportId:o.id,
-    })).join('') || `<div class="heatmap-empty">No Objectives recorded under this Goal yet.</div>`;
-    wireHeatmapTiles(grid);
-    return;
-  }
-
-  if(heatmapView.level === 'objective'){
-    const o = DATA.objectives.find(oo=>oo.id===heatmapView.objectiveId);
-    const progs = DATA.programs
-      .filter(p=>Array.isArray(p.objectives) && p.objectives.includes(o.id))
+  if(dashboardView.level === 'keyservice'){
+    const progs = programsUnderKeyService(dashboardView.ksId)
       .sort((a,b)=>goalSortWeight(programStatus(a)) - goalSortWeight(programStatus(b)));
-
     grid.innerHTML = progs.map(p=>heatTileHTML({
       typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
       dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
       exportKind:'program', exportId:p.id,
-    })).join('') || `<div class="heatmap-empty">No Programs recorded under this Objective yet.</div>`;
-    wireHeatmapTiles(grid);
+    })).join('') || `<div class="heatmap-empty">No Programs recorded under this Key Service yet.</div>`;
+    wireDashboardTiles(grid);
     return;
   }
 }
 
-function wireHeatmapTiles(scope){
-  scope.querySelectorAll('[data-drill]').forEach(tile=>{
+function wireDashboardTiles(scope){
+  scope.querySelectorAll('[data-drill-root]').forEach(tile=>{
     const activate = ()=>{
-      const kind = tile.dataset.drill;
-      // Drilling always returns to the structured, grouped path — even
-      // if the click originated from a flat view (e.g. clicking an
-      // Objective tile in "All Objectives" should land on its Programs
-      // shown the normal grouped way, not stay in flat mode).
-      goalViewMode = 'grouped';
-      if(kind === 'goal') heatmapView = { level:'goal', goalId: tile.dataset.id };
-      else if(kind === 'objective') heatmapView = { level:'objective', goalId: tile.dataset.goalId, objectiveId: tile.dataset.id };
-      renderHeatmap();
+      dashboardView = { rootMode: dashboardView.rootMode, level:'root', rootId: tile.dataset.drillRoot };
+      renderDashboardHeatmap();
     };
     tile.addEventListener('click', activate);
     tile.addEventListener('keydown', e=>{
       if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
-  scope.querySelectorAll('[data-open-detail]').forEach(tile=>{
-    const activate = ()=> openDetailModal(tile.dataset.openDetail, tile.dataset.id);
-    tile.addEventListener('click', activate);
-    tile.addEventListener('keydown', e=>{
-      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
-    });
-  });
-  wireTileExportButtons(scope);
-}
-
-/* ---------- Work System heatmap navigator (primary internal view) ----------
-   Same tile/breadcrumb mechanics as the Goal-rooted heatmap, but rooted at
-   Work Systems: Work System -> Key Service, then straight to the Key
-   Service's Detail modal (which already lists its related Programs) —
-   there's no third tile level here, since Key Service -> Program is
-   alignment-only, not a real rollup, same reasoning as why Objectives
-   (a real rollup source) get their own tile level but Key Services don't
-   need one for their related Programs. */
-let wsHeatmapView = { level: 'systems' };
-let wsViewMode = 'grouped'; // 'grouped' (by Work System) or 'flat' (all Key Services at once)
-
-function renderWsViewToggle(){
-  const el = document.getElementById('ws-view-toggle');
-  if(!el) return;
-  el.innerHTML = `
-    <button class="view-toggle-btn${wsViewMode==='grouped'?' active':''}" data-ws-mode="grouped">By Work System</button>
-    <button class="view-toggle-btn${wsViewMode==='flat'?' active':''}" data-ws-mode="flat">All Key Services</button>
-  `;
-  el.querySelectorAll('[data-ws-mode]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      wsViewMode = btn.dataset.wsMode;
-      if(wsViewMode === 'grouped') wsHeatmapView = { level:'systems' };
-      renderWsHeatmap();
-    });
-  });
-}
-
-function renderWsHeatmapBreadcrumb(){
-  const bc = document.getElementById('ws-heatmap-breadcrumb');
-  const parts = [`<button class="crumb${wsHeatmapView.level==='systems'?' current':''}" data-ws-crumb="systems">All Work Systems</button>`];
-
-  if(wsHeatmapView.level === 'system'){
-    const ws = DATA.workSystems.find(w=>w.id===wsHeatmapView.workSystemId);
-    parts.push(`<span class="sep">›</span>`);
-    parts.push(`<button class="crumb current" data-ws-crumb="system">${ws ? ws.name : 'Work System'}</button>`);
-  }
-  bc.innerHTML = parts.join('');
-
-  bc.querySelectorAll('.crumb').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(btn.dataset.wsCrumb === 'systems') wsHeatmapView = { level:'systems' };
-      renderWsHeatmap();
-    });
-  });
-}
-
-function renderWsHeatmap(){
-  renderWsViewToggle();
-  const grid = document.getElementById('ws-heatmap-grid');
-
-  // Flat mode: every Key Service, worst-first, tagged with its Work
-  // System — a genuine zero-click "see everything" view, no need to
-  // pick a Work System first. Tiles still go straight to full detail.
-  if(wsViewMode === 'flat'){
-    document.getElementById('ws-heatmap-breadcrumb').innerHTML = '';
-    const sorted = [...DATA.keyServices].sort((a,b)=>goalSortWeight(keyServiceStatus(a)) - goalSortWeight(keyServiceStatus(b)));
-    grid.innerHTML = sorted.map(ks=>{
-      const ws = DATA.workSystems.find(w=>w.id===ks.workSystem);
-      return heatTileHTML({
-        typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
-        subtitle: ws ? ws.name : '',
-        dataAttrs:`data-open-detail="ks" data-id="${ks.id}"`,
-        exportKind:'ks', exportId:ks.id,
-      });
-    }).join('') || `<div class="heatmap-empty">No Key Services recorded yet.</div>`;
-    wireWsHeatmapTiles(grid);
-    return;
-  }
-
-  renderWsHeatmapBreadcrumb();
-
-  if(wsHeatmapView.level === 'systems'){
-    const sorted = [...DATA.workSystems].sort((a,b)=>goalSortWeight(workSystemStatus(a)) - goalSortWeight(workSystemStatus(b)));
-    grid.innerHTML = sorted.map(ws=>heatTileHTML({
-      typeLabel:'Work System', name:ws.name, status:workSystemStatus(ws), trendItem:null,
-      dataAttrs:`data-ws-drill="system" data-id="${ws.id}"`,
-      exportKind:'workSystem', exportId:ws.id,
-    })).join('') || `<div class="heatmap-empty">No Work Systems recorded yet.</div>`;
-    wireWsHeatmapTiles(grid);
-    return;
-  }
-
-  if(wsHeatmapView.level === 'system'){
-    const services = DATA.keyServices
-      .filter(k=>k.workSystem===wsHeatmapView.workSystemId)
-      .sort((a,b)=>goalSortWeight(keyServiceStatus(a)) - goalSortWeight(keyServiceStatus(b)));
-
-    grid.innerHTML = services.map(ks=>heatTileHTML({
-      typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
-      dataAttrs:`data-open-detail="ks" data-id="${ks.id}"`,
-      exportKind:'ks', exportId:ks.id,
-    })).join('') || `<div class="heatmap-empty">No Key Services recorded under this Work System yet.</div>`;
-    wireWsHeatmapTiles(grid);
-    return;
-  }
-}
-
-function wireWsHeatmapTiles(scope){
-  scope.querySelectorAll('[data-ws-drill]').forEach(tile=>{
+  scope.querySelectorAll('[data-drill-ks]').forEach(tile=>{
     const activate = ()=>{
-      wsHeatmapView = { level:'system', workSystemId: tile.dataset.id };
-      renderWsHeatmap();
+      dashboardView = { rootMode: dashboardView.rootMode, level:'keyservice', rootId: dashboardView.rootId, ksId: tile.dataset.drillKs };
+      renderDashboardHeatmap();
     };
     tile.addEventListener('click', activate);
     tile.addEventListener('keydown', e=>{
@@ -1832,31 +1674,25 @@ function buildSingleItemRow(kind, id){
   if(kind === 'workSystem'){
     const ws = DATA.workSystems.find(w=>w.id===id);
     if(!ws) return null;
-    return ['Work System', ws.name, workSystemStatus(ws), '', '', '', '', ''];
+    return ['Work System', ws.name, workSystemStatus(ws), '', '', '', ''];
   }
   if(kind === 'ks'){
     const ks = DATA.keyServices.find(k=>k.id===id);
     if(!ks) return null;
     const goalNames = (ks.goals||[]).map(gid=>DATA.goals.find(g=>g.id===gid)).filter(Boolean).map(g=>g.name).join('; ');
     const ws = DATA.workSystems.find(w=>w.id===ks.workSystem);
-    return ['Key Service', ks.name, keyServiceStatus(ks), trendLabel(ks), goalNames, '', ws ? ws.name : '', ks.statusUpdated || ''];
+    return ['Key Service', ks.name, keyServiceStatus(ks), trendLabel(ks), goalNames, ws ? ws.name : '', ks.statusUpdated || ''];
   }
   if(kind === 'goal'){
     const g = DATA.goals.find(gg=>gg.id===id);
     if(!g) return null;
-    return ['Goal', g.name, goalProgramViewStatus(g), '', '', '', '', ''];
-  }
-  if(kind === 'objective'){
-    const o = DATA.objectives.find(oo=>oo.id===id);
-    if(!o) return null;
-    const g = DATA.goals.find(gg=>gg.id===o.goal);
-    return ['Objective', o.name, objectiveStatus(o), '', g ? g.name : '', '', '', ''];
+    return ['Goal', g.name, goalKeyServiceViewStatus(g), '', '', '', ''];
   }
   if(kind === 'program'){
     const p = DATA.programs.find(pp=>pp.id===id);
     if(!p) return null;
-    const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
-    return ['Program', p.name, programStatus(p), trendLabel(p), '', obNames, '', ''];
+    const ks = DATA.keyServices.find(k=>k.id===p.keyservice);
+    return ['Program', p.name, programStatus(p), trendLabel(p), '', ks ? ks.name : '', ''];
   }
   return null;
 }
@@ -1864,7 +1700,7 @@ function buildSingleItemRow(kind, id){
 function exportSingleItemCSV(kind, id){
   const row = buildSingleItemRow(kind, id);
   if(!row) return;
-  const header = ['Type','Name','Status','Trend','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated'];
+  const header = ['Type','Name','Status','Trend','Aligned Goal(s)','Work System / Key Service','Last Updated'];
   const csv = [header, row].map(r => r.map(csvEscape).join(',')).join('\r\n');
   downloadBlob(csv, `durango-${slugify(row[1])}-${todayStamp()}.csv`, 'text/csv;charset=utf-8;');
 }
@@ -1887,25 +1723,25 @@ function wireTileExportButtons(scope){
 
 function exportCSV(){
   const scope = getExportScope();
-  const rows = [['Type','Name','Status','Trend','Aligned Goal(s)','Aligned Objective(s)','Work System','Last Updated']];
+  const rows = [['Type','Name','Status','Trend','Aligned Goal(s)','Work System','Last Updated']];
 
   const trendLabel = item => { const t = computeTrend(item.history); return t ? TREND_META[t].label : ''; };
 
   const scopedGoals = scope === 'all' ? sortGoalsCanonical(DATA.goals) : DATA.goals.filter(g=>g.id===scope);
 
   scopedGoals.forEach(g=>{
-    rows.push(['Goal', g.name, goalProgramViewStatus(g), '', '', '', '', '']);
+    rows.push(['Goal', g.name, goalKeyServiceViewStatus(g), '', '', '', '']);
 
-    const objs = DATA.objectives.filter(o=>o.goal===g.id);
-    objs.forEach(o=>{
-      rows.push(['Objective', o.name, objectiveStatus(o), '', g.name, '', '', '']);
-    });
+    const services = keyServicesUnderRoot('goal', g.id);
+    services.forEach(ks=>{
+      const goalNames = (ks.goals||[]).map(gid=>DATA.goals.find(gg=>gg.id===gid)).filter(Boolean).map(gg=>gg.name).join('; ');
+      const ws = DATA.workSystems.find(w=>w.id===ks.workSystem);
+      rows.push(['Key Service', ks.name, keyServiceStatus(ks), trendLabel(ks), goalNames, ws ? ws.name : '', ks.statusUpdated || '']);
 
-    const objIds = objs.map(o=>o.id);
-    const scopedPrograms = DATA.programs.filter(p=>Array.isArray(p.objectives) && p.objectives.some(oid=>objIds.includes(oid)));
-    scopedPrograms.forEach(p=>{
-      const obNames = (p.objectives||[]).map(oid=>DATA.objectives.find(o=>o.id===oid)).filter(Boolean).map(o=>o.name).join('; ');
-      rows.push(['Program', p.name, programStatus(p), trendLabel(p), '', obNames, '', '']);
+      const progs = programsUnderKeyService(ks.id);
+      progs.forEach(p=>{
+        rows.push(['Program', p.name, programStatus(p), trendLabel(p), '', '', '']);
+      });
     });
   });
 
@@ -1978,8 +1814,8 @@ function removeHeatmapSparklines(inserted){
 // gets "everything" even though only one level is ever on screen at a
 // time — it walks the same states a person would click through.
 async function captureHeatmapLevel(view, sectionTitle){
-  heatmapView = view;
-  renderHeatmap();
+  dashboardView = view;
+  renderDashboardHeatmap();
   await new Promise(r => setTimeout(r, 150));
   const grid = document.getElementById('heatmap-grid');
   const injected = injectHeatmapSparklines(grid);
@@ -2006,11 +1842,10 @@ async function exportPDF(){
   btn.disabled = true;
   btn.textContent = '⏳ Generating…';
 
-  // Remember exactly where the person was in the heatmap so we can put
-  // them back after — the export drives the heatmap through every
-  // level it needs, which would otherwise leave the page somewhere
-  // unexpected.
-  const savedView = heatmapView;
+  // Remember exactly where the person was in the explorer so we can put
+  // them back after — the export drives it through every level it
+  // needs, which would otherwise leave the page somewhere unexpected.
+  const savedView = dashboardView;
 
   try{
     const { jsPDF } = window.jspdf;
@@ -2027,12 +1862,11 @@ async function exportPDF(){
       pdf.text(`Generated ${new Date().toLocaleString('en-US')}`, margin, margin + 16);
     }
 
-    // Drill-down pages: walk the heatmap through every level it has.
-    // (The old "Goal comparison chart" first page was removed along with
-    // the Goals-at-a-glance section — the heatmap overview below is now
-    // genuinely page 1.)
+    // Drill-down pages: walk the Goal View through every level it has
+    // (Goal -> Key Service -> Program). PDF export currently covers the
+    // Goal View only, matching the scope selector's Goal-based options.
     if(scope === 'all'){
-      const overview = await captureHeatmapLevel({ level:'goals' }, 'All Goals — Heatmap Overview');
+      const overview = await captureHeatmapLevel({ rootMode:'goal', level:'roots' }, 'All Goals — Heatmap Overview');
       addTitledPage(overview.title);
       addCanvasPaginated(pdf, overview.canvas, margin + 24);
     }
@@ -2042,17 +1876,17 @@ async function exportPDF(){
       : DATA.goals.filter(g=>g.id===scope);
 
     for(const g of goalsToWalk){
-      const goalCap = await captureHeatmapLevel({ level:'goal', goalId:g.id }, `${g.name} — Key Services & Objectives`);
+      const goalCap = await captureHeatmapLevel({ rootMode:'goal', level:'root', rootId:g.id }, `${g.name} — Key Services`);
       addTitledPage(goalCap.title);
       addCanvasPaginated(pdf, goalCap.canvas, margin + 24);
 
-      const objs = DATA.objectives.filter(o=>o.goal===g.id);
-      for(const o of objs){
-        const progs = DATA.programs.filter(p=>Array.isArray(p.objectives) && p.objectives.includes(o.id));
-        if(!progs.length) continue; // skip empty Objective pages — nothing to show
-        const objCap = await captureHeatmapLevel({ level:'objective', goalId:g.id, objectiveId:o.id }, `${g.name} → ${o.name} — Programs`);
-        addTitledPage(objCap.title);
-        addCanvasPaginated(pdf, objCap.canvas, margin + 24);
+      const services = keyServicesUnderRoot('goal', g.id);
+      for(const ks of services){
+        const progs = programsUnderKeyService(ks.id);
+        if(!progs.length) continue; // skip empty Key Service pages — nothing to show
+        const ksCap = await captureHeatmapLevel({ rootMode:'goal', level:'keyservice', rootId:g.id, ksId:ks.id }, `${g.name} → ${ks.name} — Programs`);
+        addTitledPage(ksCap.title);
+        addCanvasPaginated(pdf, ksCap.canvas, margin + 24);
       }
     }
 
@@ -2061,8 +1895,9 @@ async function exportPDF(){
   } catch(err){
     alert('Something went wrong generating the PDF. Try again, or use Export CSV instead.\n\nTechnical detail: ' + err.message);
   } finally {
-    heatmapView = savedView;
-    renderHeatmap();
+    dashboardView = savedView;
+    updateExplorerHeading();
+    renderDashboardHeatmap();
     btn.disabled = false;
     btn.textContent = originalText;
   }
@@ -2104,49 +1939,6 @@ function wireExportMenu(){
   document.getElementById('export-pdf-btn').addEventListener('click', closeMenu);
 }
 
-/* ---------- Quick filters ("what matters to you") ----------
-   Friendly, resident-facing shortcuts straight into a Work System —
-   reuses the exact same jump-and-highlight pattern already used
-   elsewhere, just triggered by a plain-language button instead of a
-   Goal card. */
-const QUICK_FILTERS = [
-  { icon:'🏛️', label:'Leadership & Government', workSystemId:'ws1' },
-  { icon:'💰', label:'City Finances', workSystemId:'ws2' },
-  { icon:'🏗️', label:'Community & Economy', workSystemId:'ws3' },
-  { icon:'🚓', label:'Public Safety', workSystemId:'ws4' },
-  { icon:'🚌', label:'Roads, Water & Transit', workSystemId:'ws5' },
-  { icon:'🌳', label:'Parks & Recreation', workSystemId:'ws6' },
-];
-
-function renderQuickFilters(){
-  const bar = document.getElementById('quick-filter-bar');
-  if(!bar) return;
-
-  bar.innerHTML = QUICK_FILTERS
-    .filter(f => DATA.workSystems.some(ws => ws.id === f.workSystemId))
-    .map(f => `
-      <button class="quick-filter-btn" data-ws-id="${f.workSystemId}">
-        <span class="qf-icon">${f.icon}</span>${f.label}
-      </button>
-    `).join('');
-
-  bar.querySelectorAll('[data-ws-id]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      wsHeatmapView = { level:'system', workSystemId: btn.dataset.wsId };
-      renderWsHeatmap();
-      const target = document.getElementById('worksystems');
-      if(!target) return;
-      target.scrollIntoView({ behavior:'smooth', block:'start' });
-      const panel = target.querySelector('.drill-col');
-      if(panel){
-        panel.style.transition = 'box-shadow .3s ease';
-        panel.style.boxShadow = '0 0 0 3px var(--sage)';
-        setTimeout(()=>{ panel.style.boxShadow = ''; }, 1400);
-      }
-    });
-  });
-}
-
 /* ---------- Guided first-visit tour ----------
    A short, dismissible walkthrough of the page's structure. Shown
    automatically once per browser (tracked via localStorage — this is a
@@ -2156,8 +1948,7 @@ const TOUR_STEPS = [
   { target: null, title: 'Welcome to the Performance Dashboard', body: 'A quick tour of how this page works. Skip anytime, or restart it later from the "❓ Take the tour" button up top.' },
   { target: '#headline-banner', title: 'Start with the headline', body: 'One computed sentence tells you what needs attention right now, generated from the data below — not hand-typed.' },
   { target: '#stat-grid', title: 'At a glance', body: 'These cards break down everything the City tracks. Hover any status line to see exactly which items make it up.' },
-  { target: '#worksystems', title: 'Browse by department', body: 'Start with a Work System (like Public Safety or Parks), drill into its Key Services, then click any tile for full detail.' },
-  { target: '#goal-drill', title: 'See the policy side', body: 'Same work, viewed differently: Strategic Plan Goals → Objectives → the Programs that support them.' },
+  { target: '#goal-drill', title: 'Explore the data two ways', body: 'Toggle between the Strategic Plan Goal View and the Work System View — both drill from there into Key Services, then into Programs.' },
   { target: '#header-export', title: 'Take it with you', body: 'Export whatever you\'re looking at as a spreadsheet or PDF — the whole dashboard, or just one Goal — right from this menu.' },
 ];
 
@@ -2229,8 +2020,8 @@ function init(){
   renderKPIs();
   renderHeadline();
   renderStats();
-  renderWsHeatmap();
-  renderHeatmap();
+  updateExplorerHeading();
+  renderDashboardHeatmap();
   wireExportButtons();
   wireExportMenu();
   wireModalChrome();
