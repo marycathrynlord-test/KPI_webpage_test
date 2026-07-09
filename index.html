@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>City of Durango — Performance Dashboard - Community View</title>
+<title>City of Durango — Performance Dashboard - Organization View</title>
 <!-- Used only for "Export PDF" — captures the Goal comparison bars as an
      image and drops it into a generated PDF. If either fails to load
      (e.g. blocked by an ad blocker), the Export PDF button degrades
@@ -553,7 +553,7 @@
     </svg>
     <div class="brand-text">
       <div class="eyebrow">City of Durango</div>
-      <div class="title">Performance Dashboard - Community View</div>
+      <div class="title">Performance Dashboard - Organization View</div>
     </div>
   </div>
   <div class="header-right">
@@ -687,8 +687,8 @@
   <div class="section" id="goal-drill">
     <div class="section-head">
       <div class="eyebrow">Explore the City's Work</div>
-      <h2 id="explorer-heading">Strategic Plan Goals → Key Services → Programs</h2>
-      <p id="explorer-subhead">Start at a Goal, drill into its Key Services, then into the Programs each one runs.</p>
+      <h2 id="explorer-heading">Strategic Plan Goals → Objectives → Key Services</h2>
+      <p id="explorer-subhead">Start at a Goal, drill into its objectives, and then see supporting Key Services.</p>
     </div>
 
     <div class="root-mode-toggle" id="root-mode-toggle"></div>
@@ -1352,10 +1352,10 @@ function updateExplorerHeading(){
   if(!heading || !sub) return;
   if(dashboardView.rootMode === 'goal'){
     heading.textContent = 'Strategic Plan Goals → Key Services → Programs';
-    sub.textContent = "Start at a Goal, drill into its Key Services, then into the Programs each one runs.";
+    sub.textContent = "Start at a Work System, drill into its Key Services, then into the Programs aligned with each one.";
   } else {
     heading.textContent = 'Work Systems → Key Services → Programs';
-    sub.textContent = "Start at a Work System, drill into its Key Services, then into the Programs each one runs.";
+    sub.textContent = "Start at a Work System, drill into its Key Services, then into the Programs aligned with each one.";
   }
 }
 
