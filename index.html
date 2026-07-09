@@ -290,6 +290,7 @@
     font-size:10px; font-weight:700;
   }
   .heat-type-mountain{ text-transform:uppercase; letter-spacing:.06em; opacity:.85; font-size:9px; }
+  .tile-brand-fill{ position:absolute; inset:0; }
   .heat-tile.goal-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; background:rgba(255,255,255,.25); }
   .heat-tile.goal-tile .tile-export-btn:hover{ background:rgba(255,255,255,.4); }
   .heat-tile.goal-tile.status-at-risk .tile-export-btn{ background:rgba(0,0,0,.12); }
@@ -1402,33 +1403,24 @@ function renderDashboardBreadcrumb(){
 // zone — two separately-positioned regions, since they now live in two
 // differently-colored parts of the same tile. `selected`/`dimmed` drive
 // the persistent-row highlight-vs-grey-out behavior.
-function goalMountainTileHTML(g, status, clip, peak, { selected=false, dimmed=false, width=null } = {}){
-  const meadow = statusDotColor(status);
-  const textColor = status === 'at-risk' ? '#3a2c05' : '#fff';
+function goalMountainTileHTML(g, status, { left, peak, right }, { selected=false, dimmed=false, width=null } = {}){
+  const statusColor = statusDotColor(status);
+  const statusTextColor = status === 'at-risk' ? '#3a2c05' : '#fff';
   const cls = `goal-tile${selected ? ' goal-tile-selected' : ''}${dimmed ? ' goal-tile-dimmed' : ''}`;
   const widthStyle = width ? `width:${width}px;` : '';
-  // Background is set here with real, already-computed hex colors (not
-  // CSS custom properties referenced from the stylesheet) specifically
-  // so it always wins over the generic .status-X{background:...}
-  // rules — inline style beats any non-!important stylesheet rule
-  // unconditionally, with no specificity math involved.
-  //
-  // A thin status "ridge line" sits right at this tile's own peak — a
-  // fixed 6-percentage-point band starting exactly where the peak is,
-  // so it naturally tapers to nothing toward the tile's edges (where
-  // the slope is lower and never reaches that height range at all).
-  // Everything below the ridge is pure brand color.
-  const stripeEnd = peak + 6;
-  const bg = `linear-gradient(180deg, ${meadow} ${peak}%, ${meadow} ${stripeEnd}%, ${g.color} ${stripeEnd}%, ${g.color} 100%)`;
+  // Solid brand color, full stop — no status color on the mountain
+  // itself anymore. Status now shows entirely through the colored
+  // "On Track / At Risk / Off Track" badge below, not the shape.
+  const clip = `polygon(0% 100%, 0% ${left}%, 50% ${peak}%, 100% ${right}%, 100% 100%)`;
   return `
     <div class="heat-tile status-${status} ${cls}"
-         style="clip-path:${clip}; background:${bg}; color:${textColor}; ${widthStyle}"
+         style="clip-path:${clip}; background:${g.color}; color:#fff; ${widthStyle}"
          role="button" tabindex="0" data-drill-root="${g.id}">
       <span class="tile-export-btn" role="button" tabindex="0" data-export-kind="goal" data-export-id="${g.id}" title="Export this Goal" aria-label="Export ${g.name}">⬇</span>
       <div class="heat-name-mountain">${g.name}</div>
       <div class="heat-foot-mountain">
         <span class="heat-type-mountain">Goal</span>
-        <span>${STATUS_META[status].label}</span>
+        <span class="heat-status-highlight" style="background:${statusColor}; color:${statusTextColor};">${STATUS_META[status].label}</span>
       </div>
     </div>
   `;
@@ -1454,9 +1446,8 @@ function renderGoalMountainRow(){
 
   container.innerHTML = goals.map((g,i)=>{
     const left = boundaries[i] ?? 40, peak = peaks[i] ?? 30, right = boundaries[i+1] ?? 40;
-    const clip = `polygon(0% 100%, 0% ${left}%, 50% ${peak}%, 100% ${right}%, 100% 100%)`;
     const status = goalKeyServiceViewStatus(g);
-    return goalMountainTileHTML(g, status, clip, peak, {
+    return goalMountainTileHTML(g, status, { left, peak, right }, {
       selected: selectedId === g.id,
       dimmed: selectedId !== null && selectedId !== g.id,
     });
@@ -1482,7 +1473,7 @@ function renderSelectedGoalBanner(){
   const status = goalKeyServiceViewStatus(g);
   container.classList.add('has-selection');
   container.innerHTML = goalMountainTileHTML(
-    g, status, 'polygon(0% 100%, 0% 55%, 50% 15%, 100% 55%, 100% 100%)', 15,
+    g, status, { left:55, peak:15, right:55 },
     { selected:true, width:260 }
   );
   // Decorative context card — not part of the click-driven grid, so
