@@ -310,24 +310,22 @@
   }
 
   /* ---------- Work System tiles: a meandering river channel, the
-     Work-System-View analog of the Goal mountain row — same "solid
-     neutral shape, status shown via the badge below" pattern the
-     mountains now use, not color-on-the-shape. Each tile is a segment
-     of ONE continuous river: the channel's edge values are shared
-     between adjacent tiles (this tile's right edge = the next tile's
-     left edge), so the water visually keeps flowing across the zero-
-     gap row exactly like the mountain range's peaks do. Sandy banks
-     fill the rest of the tile (a plain background, not clipped); the
-     water itself is a separate child element, clipped to the
-     channel shape, since a single element can only have one
-     clip-path/background — a channel-shaped cutout plus a full-tile
-     bank color needs two layered pieces. ---------- */
+     Work-System-View analog of the Goal mountain row. Each tile is a
+     segment of ONE continuous river: the channel's edge values are
+     shared between adjacent tiles (this tile's right edge = the next
+     tile's left edge), so the water visually keeps flowing across the
+     zero-gap row exactly like the mountain range's peaks do. No bank
+     color — the channel is thick enough that it's the tile, essentially;
+     name and status sit centered, which lands them inside the water
+     band at every tile (verified: the tile's vertical center always
+     falls within the channel's own bend at that point, for every one
+     of the 6 segments). ---------- */
   .heatmap-grid.river-grid{ grid-template-columns:repeat(6, 1fr); gap:0; }
   .heat-tile.river-tile{
     min-height:210px; border-radius:0; padding:0;
-    background:#D9C9A8;
-    display:flex; flex-direction:column; justify-content:flex-end; padding-bottom:14px;
-    color:var(--ink);
+    background:transparent;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; color:#fff;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,.18));
     transition: transform .12s ease, filter .15s ease;
   }
@@ -347,7 +345,7 @@
   .heat-tile.river-tile .heat-foot{
     position:relative; z-index:1; margin-left:12px; margin-right:12px;
   }
-  .heat-tile.river-tile .heat-foot{ justify-content:flex-start; gap:8px; }
+  .heat-tile.river-tile .heat-foot{ justify-content:center; gap:8px; }
   .heat-tile.river-tile .tile-export-btn{ top:auto; bottom:8px; right:8px; z-index:2; background:rgba(0,0,0,.14); }
   .heat-tile.river-tile .tile-export-btn:hover{ background:rgba(0,0,0,.24); }
   .heat-tile .heat-type{
@@ -1573,14 +1571,14 @@ function reedClusterSVG(){
 }
 
 function workSystemRiverTileHTML(ws, status, { left, mid, right }, { selected=false, dimmed=false, width=null } = {}){
-  const half = 11; // channel half-width, in % of tile height
+  const half = 32; // channel half-width, in % of tile height — thick enough that text centered in the tile always lands inside the water
   const clip = `polygon(0% ${left-half}%, 50% ${mid-half}%, 100% ${right-half}%, 100% ${right+half}%, 50% ${mid+half}%, 0% ${left+half}%)`;
   const cls = `river-tile${selected ? ' river-tile-selected' : ''}${dimmed ? ' river-tile-dimmed' : ''}`;
   const widthStyle = width ? `width:${width}px;` : '';
   const waterColor = ws.color || '#3E7C93';
   return `
     <div class="heat-tile status-${status} ${cls}"
-         style="${widthStyle}"
+         style="background:transparent; ${widthStyle}"
          role="button" tabindex="0" data-drill-root="${ws.id}">
       <div class="river-channel" style="clip-path:${clip}; background:${waterColor};"></div>
       ${reedClusterSVG()}
