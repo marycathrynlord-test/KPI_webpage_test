@@ -336,10 +336,6 @@
   .heat-tile.river-tile.river-tile-dimmed{ filter: grayscale(.82) brightness(.95) drop-shadow(0 2px 5px rgba(0,0,0,.12)); }
   .heat-tile.river-tile.river-tile-dimmed:hover{ filter: grayscale(.4) brightness(1) drop-shadow(0 5px 9px rgba(0,0,0,.2)); }
   .river-channel{ position:absolute; inset:0; }
-  .river-reeds{
-    position:absolute; bottom:6px; left:6px; width:24px; height:30px; z-index:1;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,.15));
-  }
   .heat-tile.river-tile .heat-type,
   .heat-tile.river-tile .heat-name,
   .heat-tile.river-tile .heat-foot{
@@ -1557,31 +1553,55 @@ function renderSelectedGoalBanner(){
 // — same trick the mountain range uses to look continuous across
 // separate zero-gap DOM elements. The water itself is a child element
 // (clipped to the channel shape) layered over the tile's own sandy-
-// bank background, since one element can't have two different fills.
-// Simple reed/grass cluster, tucked into the bank corner — a small
-// decorative touch, not tied to data in any way.
-function reedClusterSVG(){
-  return `
-    <svg class="river-reeds" viewBox="0 0 40 50" aria-hidden="true">
-      <path d="M5,50 Q3,30 8,10" stroke="#4A7C3F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M13,50 Q15,26 11,4" stroke="#5C8F4A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M20,50 Q22,32 18,15" stroke="#4A7C3F" stroke-width="2" fill="none" stroke-linecap="round"/>
-    </svg>
-  `;
+// Blends two hex colors by `amount` (0 = pure hex, 1 = pure target) —
+// plain arithmetic, not CSS color-mix(), so the exact resulting hex is
+// computed once in JS and is trivial to verify directly, with zero
+// dependency on how any given browser (or test tool) resolves CSS
+// color functions.
+function mixHex(hex, targetHex, amount){
+  const h = s => parseInt(s, 16);
+  const r1=h(hex.slice(1,3)), g1=h(hex.slice(3,5)), b1=h(hex.slice(5,7));
+  const r2=h(targetHex.slice(1,3)), g2=h(targetHex.slice(3,5)), b2=h(targetHex.slice(5,7));
+  const mix = (a,b) => Math.round(a + (b-a)*amount);
+  const toHex = n => n.toString(16).padStart(2,'0');
+  return `#${toHex(mix(r1,r2))}${toHex(mix(g1,g2))}${toHex(mix(b1,b2))}`;
+}
+
+// Quadratic Bezier through (0,p0), (50,p1), (100,p2), sampled at many
+// points, for a genuinely smooth/curved channel edge instead of a
+// single-bend angular polygon. A Bezier curve always stays within the
+// convex hull of its control points, so as long as p0/p1/p2 are within
+// [0,100] the whole sampled curve is guaranteed to be too.
+function bezierY(t, p0, p1, p2){
+  return (1-t)*(1-t)*p0 + 2*(1-t)*t*p1 + t*t*p2;
+}
+function riverChannelClip(left, mid, right, half, steps=14){
+  const top = [], bottom = [];
+  for(let i=0; i<=steps; i++){
+    const t = i/steps, x = (t*100).toFixed(1);
+    top.push(`${x}% ${bezierY(t, left-half, mid-half, right-half).toFixed(1)}%`);
+    bottom.push(`${x}% ${bezierY(t, left+half, mid+half, right+half).toFixed(1)}%`);
+  }
+  return `polygon(${[...top, ...bottom.reverse()].join(', ')})`;
 }
 
 function workSystemRiverTileHTML(ws, status, { left, mid, right }, { selected=false, dimmed=false, width=null } = {}){
   const half = 32; // channel half-width, in % of tile height — thick enough that text centered in the tile always lands inside the water
-  const clip = `polygon(0% ${left-half}%, 50% ${mid-half}%, 100% ${right-half}%, 100% ${right+half}%, 50% ${mid+half}%, 0% ${left+half}%)`;
+  const clip = riverChannelClip(left, mid, right, half);
   const cls = `river-tile${selected ? ' river-tile-selected' : ''}${dimmed ? ' river-tile-dimmed' : ''}`;
   const widthStyle = width ? `width:${width}px;` : '';
-  const waterColor = ws.color || '#3E7C93';
+  const base = ws.color || '#4A7D8C';
+  // Ombre: a lighter tint near the "surface" (top) deepening toward the
+  // base color at the "bottom" — real computed hex stops, not a CSS
+  // color-mix() gradient.
+  const lightShade = mixHex(base, '#ffffff', 0.4);
+  const darkShade = mixHex(base, '#000000', 0.25);
+  const waterGradient = `linear-gradient(180deg, ${lightShade} 0%, ${base} 55%, ${darkShade} 100%)`;
   return `
     <div class="heat-tile status-${status} ${cls}"
          style="background:transparent; ${widthStyle}"
          role="button" tabindex="0" data-drill-root="${ws.id}">
-      <div class="river-channel" style="clip-path:${clip}; background:${waterColor};"></div>
-      ${reedClusterSVG()}
+      <div class="river-channel" style="clip-path:${clip}; background:${waterGradient};"></div>
       <span class="tile-export-btn" role="button" tabindex="0" data-export-kind="workSystem" data-export-id="${ws.id}" title="Export this Work System" aria-label="Export ${ws.name}">⬇</span>
       <div class="heat-type">Work System</div>
       <div class="heat-name">${ws.name}</div>
