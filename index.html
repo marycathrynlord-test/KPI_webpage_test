@@ -337,7 +337,11 @@
   }
   .heat-tile.river-tile.river-tile-dimmed{ filter: grayscale(.82) brightness(.95) drop-shadow(0 2px 5px rgba(0,0,0,.12)); }
   .heat-tile.river-tile.river-tile-dimmed:hover{ filter: grayscale(.4) brightness(1) drop-shadow(0 5px 9px rgba(0,0,0,.2)); }
-  .river-channel{ position:absolute; inset:0; background:#3E7C93; }
+  .river-channel{ position:absolute; inset:0; }
+  .river-reeds{
+    position:absolute; bottom:6px; left:6px; width:24px; height:30px; z-index:1;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.15));
+  }
   .heat-tile.river-tile .heat-type,
   .heat-tile.river-tile .heat-name,
   .heat-tile.river-tile .heat-foot{
@@ -1556,16 +1560,30 @@ function renderSelectedGoalBanner(){
 // separate zero-gap DOM elements. The water itself is a child element
 // (clipped to the channel shape) layered over the tile's own sandy-
 // bank background, since one element can't have two different fills.
+// Simple reed/grass cluster, tucked into the bank corner — a small
+// decorative touch, not tied to data in any way.
+function reedClusterSVG(){
+  return `
+    <svg class="river-reeds" viewBox="0 0 40 50" aria-hidden="true">
+      <path d="M5,50 Q3,30 8,10" stroke="#4A7C3F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M13,50 Q15,26 11,4" stroke="#5C8F4A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M20,50 Q22,32 18,15" stroke="#4A7C3F" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  `;
+}
+
 function workSystemRiverTileHTML(ws, status, { left, mid, right }, { selected=false, dimmed=false, width=null } = {}){
   const half = 11; // channel half-width, in % of tile height
   const clip = `polygon(0% ${left-half}%, 50% ${mid-half}%, 100% ${right-half}%, 100% ${right+half}%, 50% ${mid+half}%, 0% ${left+half}%)`;
   const cls = `river-tile${selected ? ' river-tile-selected' : ''}${dimmed ? ' river-tile-dimmed' : ''}`;
   const widthStyle = width ? `width:${width}px;` : '';
+  const waterColor = ws.color || '#3E7C93';
   return `
     <div class="heat-tile status-${status} ${cls}"
          style="${widthStyle}"
          role="button" tabindex="0" data-drill-root="${ws.id}">
-      <div class="river-channel" style="clip-path:${clip};"></div>
+      <div class="river-channel" style="clip-path:${clip}; background:${waterColor};"></div>
+      ${reedClusterSVG()}
       <span class="tile-export-btn" role="button" tabindex="0" data-export-kind="workSystem" data-export-id="${ws.id}" title="Export this Work System" aria-label="Export ${ws.name}">⬇</span>
       <div class="heat-type">Work System</div>
       <div class="heat-name">${ws.name}</div>
