@@ -109,6 +109,70 @@
     },
     { "id": "p5", "name": "Transit Planning", "objectives": ["ob11", "ob10"], "keyservice": "ks14", "status": "on-track" },
     { "id": "p6", "name": "Fare Administration", "objectives": ["ob11"], "keyservice": "ks14", "status": "at-risk" },
-    { "id": "p7", "name": "Parking Management", "objectives": ["ob11"], "keyservice": "ks14", "status": "on-track" }
+    { "id": "p7", "name": "Parking Management", "objectives": ["ob11"], "keyservice": "ks14", "status": "on-track" },
+
+
+    { "id": "p8", "name": "Streets and Traffic Operations", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p9", "name": "Stormwater", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p10", "name": "Fleet Management", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p11", "name": "Facilities Management", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p12", "name": "Solid Waste", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p13", "name": "Water/Waterwater Utility", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p14", "name": "Asset Management", "keyservice": "ks13", "status": "on-track" },
+    { "id": "p15", "name": "Capital Improvement Projects", "keyservice": "ks13", "status": "on-track" },
+
+
+    { "id": "p16", "name": "Records Retention", "keyservice": "ks2", "status": "on-track" },
+    { "id": "p17", "name": "Elections Administration", "keyservice": "ks2", "status": "on-track" },
+    { "id": "p18", "name": "Public Records Request", "keyservice": "ks2", "status": "on-track" },
+
+    { "id": "p19", "name": "Learning and Development", "keyservice": "ks5", "status": "on-track" },
+    { "id": "p20", "name": "Employee Relations", "keyservice": "ks5", "status": "on-track" },
+    { "id": "p21", "name": "Recruitment and Retention", "keyservice": "ks5", "status": "on-track" },
+    { "id": "p22", "name": "Compensation and Benefits", "keyservice": "ks5", "status": "on-track" },
+
+
+    { "id": "p23", "name": "Legal Counsel", "keyservice": "ks6", "status": "on-track" },
+    { "id": "p24", "name": "Risk Management", "keyservice": "ks6", "status": "on-track" },
+    { "id": "p25", "name": "Code Compliance", "keyservice": "ks6", "status": "on-track" },
+    { "id": "p26", "name": "Licensing", "keyservice": "ks6", "status": "on-track" },
+
+    { "id": "p27", "name": "Network and Infrastructure", "keyservice": "ks7", "status": "on-track" },
+    { "id": "p28", "name": "Cybersecurity", "keyservice": "ks7", "status": "on-track" },
+    { "id": "p29", "name": "Business Applications Support", "keyservice": "ks7", "status": "on-track" },
+    { "id": "p30", "name": "GIS", "keyservice": "ks7", "status": "on-track" },
+    { "id": "p31", "name": "Help Desk", "keyservice": "ks7", "status": "on-track" },
+
+    { "id": "p32", "name": "Long Range Comprehensive Planning", "keyservice": "ks8", "status": "on-track" },
+    { "id": "p33", "name": "Development Review and Permitting", "keyservice": "ks8", "status": "on-track" },
+    { "id": "p34", "name": "Housing Inspections", "keyservice": "ks8", "status": "on-track" },
+    { "id": "p35", "name": "Historical Preservation", "keyservice": "ks8", "status": "on-track" },
+
+    { "id": "p36", "name": "Business Retention and Attraction", "keyservice": "ks9", "status": "on-track" },
+    { "id": "p37", "name": "Small Business Support", "keyservice": "ks9", "status": "on-track" },
+    { "id": "p38", "name": "Workforce Partnership", "keyservice": "ks9", "status": "on-track" },
+    { "id": "p39", "name": "Development Inventives", "keyservice": "ks9", "status": "on-track" },
+    { "id": "p40", "name": "Destination Management", "keyservice": "ks9", "status": "on-track" },
+
+    { "id": "p41", "name": "Energy and Climate Programs", "keyservice": "ks10", "status": "on-track" },
+    { "id": "p42", "name": "Waste Reduction (Recycling)", "keyservice": "ks10", "status": "on-track" },
+    { "id": "p43", "name": "Water Conservation", "keyservice": "ks10", "status": "on-track" },
+    { "id": "p44", "name": "Urban Forestry", "keyservice": "ks10", "status": "on-track" },
+    { "id": "p45", "name": "Resiliency Planning", "keyservice": "ks10", "status": "on-track" },
+
+    { "id": "p46", "name": "Police Patrol", "keyservice": "ks11", "status": "on-track" },
+    { "id": "p47", "name": "Criminal Investigations", "keyservice": "ks11", "status": "on-track" },
+    { "id": "p48", "name": "Emergency Management", "keyservice": "ks11", "status": "on-track" },
+    { "id": "p49", "name": "Ranger Program", "keyservice": "ks11", "status": "on-track" },
+    { "id": "p50", "name": "Community Policing Programs", "keyservice": "ks11", "status": "on-track" },
+    { "id": "p51", "name": "Aircraft Rescue and Firefighting", "keyservice": "ks11", "status": "on-track" },
+
+    { "id": "p52", "name": "Municipal Court Administration", "keyservice": "ks12", "status": "on-track" },
+    { "id": "p53", "name": "Traffic Court", "keyservice": "ks12", "status": "on-track" },
+    { "id": "p54", "name": "Criminal Court", "keyservice": "ks12", "status": "on-track" },
+    { "id": "p55", "name": "Specialty Court", "keyservice": "ks12", "status": "on-track" },
+    { "id": "p56", "name": "Juvenile Court", "keyservice": "ks12", "status": "on-track" },
+    { "id": "p57", "name": "Prosecutor Success", "keyservice": "ks12", "status": "on-track" }
+    
   ]
 }
