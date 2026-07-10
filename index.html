@@ -1367,8 +1367,8 @@ function updateExplorerHeading(){
   const sub = document.getElementById('explorer-subhead');
   if(!heading || !sub) return;
   if(dashboardView.rootMode === 'goal'){
-    heading.textContent = 'Strategic Plan Goals → Objectives → Key Services → Programs';
-    sub.textContent = "Start at a Goal, drill into its Objectives, then into the Key Services and Programs each one connects to.";
+    heading.textContent = 'Strategic Plan Goals → Objectives → Key Services';
+    sub.textContent = "Start at a Goal, drill into its Objectives, then into the Key Services each Objective connects to."
   } else {
     heading.textContent = 'Work Systems → Key Services → Programs';
     sub.textContent = "Start at a Work System, drill into its Key Services, then into the Programs each one runs.";
@@ -1573,19 +1573,33 @@ function renderDashboardHeatmap(){
     return;
   }
 
-  if(dashboardView.level === 'keyservice'){
-    const progs = (dashboardView.rootMode === 'goal'
-      ? programsUnderObjectiveAndKeyService(dashboardView.objectiveId, dashboardView.ksId)
-      : programsUnderKeyService(dashboardView.ksId)
-    ).sort((a,b)=>goalSortWeight(programStatus(a)) - goalSortWeight(programStatus(b)));
-    grid.innerHTML = progs.map(p=>heatTileHTML({
-      typeLabel:'Program', name:p.name, status:programStatus(p), trendItem:p,
-      dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
-      exportKind:'program', exportId:p.id,
-    })).join('') || `<div class="heatmap-empty">No Programs recorded under this Key Service yet.</div>`;
-    wireDashboardTiles(grid);
+ 
+if(dashboardView.level === 'keyservice') {
+
+  // GOAL VIEW: stop drill-down at Key Service
+  if (dashboardView.rootMode === 'goal') {
+    grid.innerHTML = `<div class="heatmap-empty">Key Service selected — no further drill-down in Goal View.</div>`;
     return;
   }
+
+  // WORK SYSTEM VIEW: continue to Programs
+  const progs = programsUnderKeyService(dashboardView.ksId)
+    .sort((a,b)=>goalSortWeight(programStatus(a)) - goalSortWeight(programStatus(b)));
+
+  grid.innerHTML = progs.map(p => heatTileHTML({
+    typeLabel:'Program',
+    name:p.name,
+    status:programStatus(p),
+    trendItem:p,
+    dataAttrs:`data-open-detail="program" data-id="${p.id}"`,
+    exportKind:'program',
+    exportId:p.id
+  })).join('') || `<div class="heatmap-empty">No Programs recorded under this Key Service yet.</div>`;
+
+  wireDashboardTiles(grid);
+  return;
+}
+
 }
 
 function wireDashboardTiles(scope){
@@ -1619,13 +1633,7 @@ function wireDashboardTiles(scope){
       if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
     });
   });
-  scope.querySelectorAll('[data-open-detail]').forEach(tile=>{
-    const activate = ()=> openDetailModal(tile.dataset.openDetail, tile.dataset.id);
-    tile.addEventListener('click', activate);
-    tile.addEventListener('keydown', e=>{
-      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
-    });
-  });
+  
   wireTileExportButtons(scope);
 }
 
