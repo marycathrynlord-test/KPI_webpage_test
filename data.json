@@ -26,8 +26,15 @@
     { "id": "ob11", "name": "4.2 Transportation Infrastructure Investment", "goal": "g4" },
     { "id": "ob12", "name": "4.3 Water and Wastewater Systems", "goal": "g4" },
     { "id": "ob13", "name": "4.4 Airport and Aviation Hubs", "goal": "g4" },
-    { "id": "ob14", "name": "5.1 Civic and Engaged Communication", "goal": "g5" },
-    { "id": "ob15", "name": "6.1 Employee Growth and Retention", "goal": "g6" }
+    { "id": "ob14", "name": "4.5 Reliable and Secure IT Infrastrucutre", "goal": "g4" },
+    { "id": "ob15", "name": "4.6 City surface Transit and Right of Way", "goal": "g4" },
+    { "id": "ob16", "name": "5.1 Civic and Engaged Communication", "goal": "g5" },
+    { "id": "ob17", "name": "5.2 Open and Accessible Information Communication", "goal": "g5" },
+    { "id": "ob18", "name": "6.1 Employee Growth and Retention", "goal": "g6" },
+    { "id": "ob19", "name": "6.2 Comprehensive Career Progression Strategy", "goal": "g6" },
+    { "id": "ob20", "name": "6.3 Workforce Preparedness and Optimization", "goal": "g6" }
+
+
   ],
 
   "workSystems": [
@@ -41,12 +48,12 @@
 
   "keyServices": [
     { "id": "ks1", "name": "Administrative Leadership & Governance", "workSystem": "ws1", "goals": ["g1"], "objectives": ["ob1, ob2, ob3"], "status": "on-track" },
-    { "id": "ks2", "name": "City Clerk & Records Management", "workSystem": "ws1", "goals": ["g1"], "objectives": ["ob2, ob14"], "status": "on-track" },
-    { "id": "ks3", "name": "Public Information & Community Engagement", "workSystem": "ws1", "goals": ["g5", "g1"], "objectives": ["ob14, ob2"], "status": "at-risk" },
+    { "id": "ks2", "name": "City Clerk & Records Management", "workSystem": "ws1", "goals": ["g1"], "objectives": ["ob2, ob16, ob17"], "status": "on-track" },
+    { "id": "ks3", "name": "Public Information & Community Engagement", "workSystem": "ws1", "goals": ["g5", "g1"], "objectives": ["ob16, ob17, ob2"], "status": "at-risk" },
     { "id": "ks4", "name": "Financial Management & Accountability", "workSystem": "ws2", "goals": ["g1"], "objectives": ["ob1, ob2"], "status": "on-track" },
-    { "id": "ks5", "name": "Human Resources & Workforce Development", "workSystem": "ws2", "goals": ["g6", "g1"], "objectives": ["ob15"], "status": "at-risk" },
+    { "id": "ks5", "name": "Human Resources & Workforce Development", "workSystem": "ws2", "goals": ["g6", "g1"], "objectives": ["ob18, ob19, ob20"], "status": "at-risk" },
     { "id": "ks6", "name": "Legal Services", "workSystem": "ws2", "goals": ["g1"], "objectives": ["ob1, ob7"], "status": "on-track" },
-    { "id": "ks7", "name": "Information Technology Services", "workSystem": "ws2", "goals": ["g1"], "objectives": ["ob1, ob14, ob10"],  "status": "off-track",
+    { "id": "ks7", "name": "Information Technology Services", "workSystem": "ws2", "goals": ["g1"], "objectives": ["ob1, ob14, ob17, ob10, ob11, ob15"],  "status": "off-track",
       "details": {
         "description": "Provides IT infrastructure, cybersecurity, and technical support across all City Work Systems.",
         "owner": "IT Director",
@@ -60,21 +67,21 @@
     { "id": "ks8", "name": "Community Development & Planning", "workSystem": "ws3", "goals": ["g2"],  "objectives": ["ob4, ob6, ob9"], "status": "on-track" },
     { "id": "ks9", "name": "Economic Prosperity & Business Support", "workSystem": "ws3", "goals": ["g2"],  "objectives": ["ob5, ob6"],  "status": "on-track" },
     { "id": "ks10", "name": "Sustainability & Environmental Stewardship", "workSystem": "ws3", "goals": ["g1", "g4"],  "objectives": ["ob3, ob9, ob12"], "status": "at-risk" },
-    { "id": "ks11", "name": "Public Safety Services", "workSystem": "ws4", "goals": ["g3"],  "objectives": ["ob7, ob18, ob13"], "status": "on-track" },
+    { "id": "ks11", "name": "Public Safety Services", "workSystem": "ws4", "goals": ["g3"],  "objectives": ["ob7, ob8, ob13"], "status": "on-track" },
     { "id": "ks12", "name": "Municipal Court", "workSystem": "ws4", "goals": ["g3"],  "objectives": ["ob7, ob1"], "status": "on-track" },
-    { "id": "ks13", "name": "Public Works & Municipal Services", "workSystem": "ws5", "goals": ["g4"],  "objectives": ["ob10, ob11, ob12, ob3"], "status": "on-track" },
-    { "id": "ks14", "name": "Transit Services", "workSystem": "ws5",  "objectives": ["ob10, ob11, ob14"], "goals": ["g4"],
+    { "id": "ks13", "name": "Public Works & Municipal Services", "workSystem": "ws5", "goals": ["g4"],  "objectives": ["ob10, ob11, ob12, ob3, ob15"], "status": "on-track" },
+    { "id": "ks14", "name": "Transit Services", "workSystem": "ws5",  "objectives": ["ob10, ob11, ob15, ob16"], "goals": ["g4"],
       "details": {
         "description": "Oversees fixed-route, paratransit, and micromobility services connecting residents across Durango.",
         "owner": "Transit Manager",
         "lastUpdated": "2026-06-20"
       }
     },
-    { "id": "ks15", "name": "Asset Management", "workSystem": "ws5", "goals": ["g4"],  "objectives": ["ob11, ob12, ob0"], "status": "at-risk" },
+    { "id": "ks15", "name": "Asset Management", "workSystem": "ws5", "goals": ["g4"],  "objectives": ["ob11, ob12, ob14, ob1"], "status": "at-risk" },
     { "id": "ks16", "name": "Airport Operations", "workSystem": "ws5", "goals": ["g4"],  "objectives": ["ob13, ob10"], "status": "on-track" },
-    { "id": "ks17", "name": "Library & Learning Services", "workSystem": "ws6", "goals": ["g3"],  "objectives": ["ob8, ob14"], "status": "on-track" },
+    { "id": "ks17", "name": "Library & Learning Services", "workSystem": "ws6", "goals": ["g3"],  "objectives": ["ob8, ob16, ob17"], "status": "on-track" },
     { "id": "ks18", "name": "Parks & Open Space Management", "workSystem": "ws6", "goals": ["g3"],  "objectives": ["ob9, ob3"], "status": "on-track" },
-    { "id": "ks20", "name": "Recreation & Open Space Management", "workSystem": "ws6", "goals": ["g3"], "objectives": ["ob8, ob14"],  "status": "at-risk" }
+    { "id": "ks20", "name": "Recreation & Open Space Management", "workSystem": "ws6", "goals": ["g3"], "objectives": ["ob8, ob16"],  "status": "at-risk" }
   ],
 
   "programs": [

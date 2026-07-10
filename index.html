@@ -1568,7 +1568,7 @@ function renderDashboardHeatmap(){
       typeLabel:'Key Service', name:ks.name, status:keyServiceStatus(ks), trendItem:ks,
       dataAttrs:`data-drill-ks="${ks.id}"`,
       exportKind:'ks', exportId:ks.id,
-    })).join('') || `<div class="heatmap-empty">No Key Services found through this Objective's Programs yet.</div>`;
+    })).join('') || `<div class="heatmap-empty">"There a no Key Services associated with this Objective yet.".</div>`;
     wireDashboardTiles(grid);
     return;
   }
